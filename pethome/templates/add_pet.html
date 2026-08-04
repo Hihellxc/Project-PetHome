@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}ลงประกาศสัตว์ - PetHome{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">🐾 ลงประกาศสัตว์เลี้ยง</h2>
+
+<div class="form-panel">
+  <form method="POST" action="{{ url_for('add_pet') }}" enctype="multipart/form-data" class="row g-3">
+
+    <div class="col-md-6">
+      <label class="form-label">ชื่อสัตว์</label>
+      <input type="text" name="name" class="form-control" required>
+    </div>
+
+    <div class="col-md-6">
+      <label class="form-label">รูปสัตว์</label>
+      <input type="file" name="image" class="form-control" accept="image/*">
+    </div>
+
+    <div class="col-md-4">
+      <label class="form-label">ประเภท</label>
+      <select name="type" class="form-select" required>
+        <option value="หมา">หมา</option>
+        <option value="แมว">แมว</option>
+      </select>
+    </div>
+
+    <div class="col-md-4">
+      <label class="form-label">เพศ</label>
+      <select name="gender" class="form-select" required>
+        <option value="ผู้">ผู้</option>
+        <option value="เมีย">เมีย</option>
+      </select>
+    </div>
+
+    <div class="col-md-4">
+      <label class="form-label">อายุ (ปี)</label>
+      <input type="number" name="age" class="form-control" min="0" required>
+    </div>
+
+    <div class="col-md-6">
+      <label class="form-label">จังหวัด</label>
+      <input type="text" name="province" class="form-control" required>
+    </div>
+
+    <div class="col-12">
+      <label class="form-label">รายละเอียด</label>
+      <textarea name="description" class="form-control" rows="4"></textarea>
+    </div>
+
+    <div class="col-12">
+      <button type="submit" class="btn btn-primary">บันทึกประกาศ</button>
+    </div>
+
+  </form>
+</div>
+{% endblock %}

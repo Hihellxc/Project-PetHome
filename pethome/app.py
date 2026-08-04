@@ -1,3 +1,8 @@
+"""
+PetHome - ระบบรับเลี้ยงสัตว์
+Backend: Flask + SQLite
+โค้ดเขียนแบบพื้นฐาน อ่านง่าย เข้าใจง่าย เหมาะสำหรับผู้เริ่มต้น
+"""
 
 import os
 import sqlite3
@@ -16,6 +21,11 @@ UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads")
 ALLOWED_EXT = {"png", "jpg", "jpeg", "gif"}
 
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+
+# สร้างโฟลเดอร์เก็บรูปภาพไว้ล่วงหน้าเสมอ (เผื่อโฟลเดอร์ถูกลบ หรือรันครั้งแรกในเครื่องใหม่)
+# ถ้าไม่มีบรรทัดนี้ และโฟลเดอร์นี้ไม่มีอยู่จริง การอัปโหลดรูปจะทำให้ทั้งคำขอ error
+# และส่งผลให้ข้อมูลสัตว์เลี้ยงไม่ถูกบันทึกลงฐานข้อมูลเลย (แม้กรอกข้อมูลถูกต้องก็ตาม)
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 
 # ---------- ฟังก์ชันช่วยเหลือ (Helper) ----------
@@ -192,13 +202,23 @@ def add_pet():
         description = request.form["description"]
 
         # จัดการไฟล์รูปภาพ
+        # หมายเหตุ: ถ้าการบันทึกรูปเกิดปัญหา (เช่น โฟลเดอร์หาย, ไฟล์เสีย)
+        # เราจะ "ไม่ปล่อยให้ error ล้มทั้งคำขอ" แต่จะบันทึกประกาศต่อไปโดยไม่มีรูป
+        # แล้วแจ้งเตือนผู้ใช้ให้รู้ตัว
         image_file = request.files.get("image")
         image_filename = ""
-        if image_file and image_file.filename and allowed_file(image_file.filename):
-            image_filename = secure_filename(
-                f"{datetime.now().timestamp()}_{image_file.filename}"
-            )
-            image_file.save(os.path.join(app.config["UPLOAD_FOLDER"], image_filename))
+        if image_file and image_file.filename:
+            if allowed_file(image_file.filename):
+                try:
+                    image_filename = secure_filename(
+                        f"{datetime.now().timestamp()}_{image_file.filename}"
+                    )
+                    image_file.save(os.path.join(app.config["UPLOAD_FOLDER"], image_filename))
+                except OSError:
+                    image_filename = ""
+                    flash("บันทึกรูปภาพไม่สำเร็จ แต่ข้อมูลอื่นถูกบันทึกแล้ว กรุณาแก้ไขประกาศเพื่อเพิ่มรูปใหม่")
+            else:
+                flash("ไฟล์รูปภาพต้องเป็นนามสกุล png, jpg, jpeg หรือ gif เท่านั้น (บันทึกประกาศโดยไม่มีรูป)")
 
         conn = get_db()
         conn.execute(
@@ -240,11 +260,18 @@ def edit_pet(pet_id):
 
         image_filename = pet["image"]
         image_file = request.files.get("image")
-        if image_file and image_file.filename and allowed_file(image_file.filename):
-            image_filename = secure_filename(
-                f"{datetime.now().timestamp()}_{image_file.filename}"
-            )
-            image_file.save(os.path.join(app.config["UPLOAD_FOLDER"], image_filename))
+        if image_file and image_file.filename:
+            if allowed_file(image_file.filename):
+                try:
+                    new_filename = secure_filename(
+                        f"{datetime.now().timestamp()}_{image_file.filename}"
+                    )
+                    image_file.save(os.path.join(app.config["UPLOAD_FOLDER"], new_filename))
+                    image_filename = new_filename  # เปลี่ยนเป็นรูปใหม่เมื่อบันทึกสำเร็จเท่านั้น
+                except OSError:
+                    flash("บันทึกรูปภาพใหม่ไม่สำเร็จ ระบบใช้รูปเดิมไว้ก่อน")
+            else:
+                flash("ไฟล์รูปภาพต้องเป็นนามสกุล png, jpg, jpeg หรือ gif เท่านั้น (ใช้รูปเดิมไว้ก่อน)")
 
         conn.execute(
             """UPDATE Pet SET name=?, type=?, gender=?, age=?, province=?,

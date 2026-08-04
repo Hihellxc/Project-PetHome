@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}เข้าสู่ระบบ - PetHome{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper">
+  <div class="auth-card">
+    <svg class="auth-icon" viewBox="0 0 24 24"><path d="M12 14.5c-2.9 0-6 2.1-6 4.6 0 1 .8 1.9 1.9 1.9.9 0 1.6-.4 2.4-.8.6-.3 1.2-.6 1.7-.6s1.1.3 1.7.6c.8.4 1.5.8 2.4.8 1.1 0 1.9-.9 1.9-1.9 0-2.5-3.1-4.6-6-4.6zM6.5 11c1.1 0 2-1.1 2-2.5S7.6 6 6.5 6 4.5 7.1 4.5 8.5 5.4 11 6.5 11zm11 0c1.1 0 2-1.1 2-2.5S18.6 6 17.5 6s-2 1.1-2 2.5 .9 2.5 2 2.5zM9.2 8c1.1 0 2-1.2 2-2.7S10.3 2.6 9.2 2.6s-2 1.2-2 2.7.9 2.7 2 2.7zm5.6 0c1.1 0 2-1.2 2-2.7S15.9 2.6 14.8 2.6s-2 1.2-2 2.7.9 2.7 2 2.7z"/></svg>
+    <h2 class="mb-4">เข้าสู่ระบบ</h2>
+    <form method="POST" action="{{ url_for('login') }}">
+      <div class="mb-3">
+        <label class="form-label">อีเมล</label>
+        <input type="email" name="email" class="form-control" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">รหัสผ่าน</label>
+        <input type="password" name="password" class="form-control" required>
+      </div>
+      <button type="submit" class="btn btn-primary w-100">เข้าสู่ระบบ</button>
+    </form>
+    <p class="mt-3 text-center">ยังไม่มีบัญชี? <a href="{{ url_for('register') }}">สมัครสมาชิก</a></p>
+  </div>
+</div>
+{% endblock %}

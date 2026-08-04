@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}ประกาศของฉัน - PetHome{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="mb-0">📋 ประกาศของฉัน</h2>
+  <a href="{{ url_for('add_pet') }}" class="btn btn-primary">+ เพิ่มประกาศใหม่</a>
+</div>
+
+<table class="table table-pethome align-middle">
+  <thead>
+    <tr>
+      <th>รูป</th>
+      <th>ชื่อ</th>
+      <th>ประเภท</th>
+      <th>จังหวัด</th>
+      <th>สถานะ</th>
+      <th>จัดการ</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for pet in pets %}
+    <tr>
+      <td style="width:100px">
+        {% if pet.image %}
+          <img src="{{ url_for('static', filename='uploads/' ~ pet.image) }}" class="pet-image-small">
+        {% else %}
+          <span class="text-muted">ไม่มีรูป</span>
+        {% endif %}
+      </td>
+      <td>{{ pet.name }}</td>
+      <td>{{ pet.type }}</td>
+      <td>{{ pet.province }}</td>
+      <td>
+        {% if pet.status == 'Available' %}
+          <span class="badge badge-available">Available</span>
+        {% else %}
+          <span class="badge badge-adopted">Adopted</span>
+        {% endif %}
+      </td>
+      <td>
+        <a href="{{ url_for('pet_detail', pet_id=pet.pet_id) }}" class="btn btn-sm btn-outline-primary">ดู</a>
+        <a href="{{ url_for('edit_pet', pet_id=pet.pet_id) }}" class="btn btn-sm btn-outline-warning">แก้ไข</a>
+        <a href="{{ url_for('delete_pet', pet_id=pet.pet_id) }}"
+           class="btn btn-sm btn-outline-danger"
+           onclick="return confirmDelete()">ลบ</a>
+      </td>
+    </tr>
+    {% else %}
+    <tr>
+      <td colspan="6" class="p-0">
+        <div class="empty-state">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M12 3l7 4v5c0 5-3 8-7 9-4-1-7-4-7-9V7l7-4z"/>
+            <path d="M9.5 12l1.8 1.8L15 10" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <p>คุณยังไม่มีประกาศ ลองเพิ่มน้องตัวแรกกันเลย!</p>
+        </div>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

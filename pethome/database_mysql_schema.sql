@@ -1,4 +1,3 @@
--- Active: 1785676366625@@127.0.0.1@3306
 -- PetHome Database Schema (MySQL version)
 -- ใช้คำสั่งนี้ถ้าต้องการรันบน MySQL แทน SQLite
 -- วิธีใช้: mysql -u root -p < database_mysql_schema.sql
