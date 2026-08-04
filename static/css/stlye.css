@@ -1,26 +1,482 @@
-/* PetHome - CSS พื้นฐาน */
+/* =========================================================
+   PetHome - Theme: ฟ้า-ขาว น่ารัก ทันสมัย เป็นมิตร
+   ฟอนต์: Mali (หัวข้อ, แนวเขียนมืออบอุ่น) + Sarabun (เนื้อหา, อ่านง่าย)
+   ========================================================= */
+
+:root {
+  /* ---------- โทนสีหลัก (ฟ้า-ขาว) ---------- */
+  --sky-100: #eef7ff;
+  --sky-200: #dbeeff;
+  --sky-300: #b8e0ff;
+  --sky-400: #7ec4fb;
+  --sky-500: #45a6f5;
+  --sky-600: #2f8ce0;
+  --navy-700: #1c3f66;
+  --navy-900: #10263f;
+  --white: #ffffff;
+  --ink: #2b3f52;
+  --ink-soft: #6c8aa3;
+
+  /* ---------- สีแต้มความน่ารัก ---------- */
+  --sun-100: #fff6e0;
+  --sun-400: #ffcf5c;
+  --blossom-100: #ffe7ef;
+  --blossom-400: #ff9fbf;
+  --mint-100: #e3fbf0;
+  --mint-400: #5fd1a3;
+
+  --radius-xl: 28px;
+  --radius-lg: 22px;
+  --radius-md: 16px;
+  --radius-sm: 12px;
+  --radius-pill: 999px;
+
+  --shadow-soft: 0 12px 28px rgba(69, 166, 245, 0.18);
+  --shadow-card: 0 6px 18px rgba(28, 63, 102, 0.09);
+  --shadow-pop: 0 4px 0 rgba(28, 63, 102, 0.15);
+}
+
+/* ---------- พื้นฐาน ---------- */
+html, body { height: 100%; }
 
 body {
-    background-color: #8bd9f8;
+  background-color: var(--sky-100);
+  background-image:
+    radial-gradient(circle at 6% 4%, var(--sky-200) 0%, transparent 40%),
+    radial-gradient(circle at 96% 10%, var(--sun-100) 0%, transparent 35%),
+    radial-gradient(circle at 90% 90%, var(--blossom-100) 0%, transparent 35%);
+  background-attachment: fixed;
+  color: var(--ink);
+  font-family: "Sarabun", "Segoe UI", sans-serif;
+  font-size: 1.02rem;
+  line-height: 1.65;
 }
+
+h1, h2, h3, h4, .navbar-brand, .brand-font {
+  font-family: "Mali", "Sarabun", sans-serif;
+}
+
+h1, h2, h3, h4 { color: var(--navy-700); font-weight: 700; }
+h2 { font-size: 1.7rem; }
+
+a { color: var(--sky-600); }
+
+/* ---------- Accessibility: focus ที่มองเห็นชัด ---------- */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+.btn:focus-visible {
+  outline: 3px solid var(--sun-400);
+  outline-offset: 2px;
+}
+
+/* ---------- ลายรอยเท้า (Signature) ---------- */
+.paw-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin: 10px 0 30px;
+  color: var(--sky-300);
+}
+.paw-divider::before,
+.paw-divider::after {
+  content: "";
+  height: 2px;
+  width: 54px;
+  border-radius: 2px;
+  background: var(--sky-300);
+}
+.paw-divider svg { width: 20px; height: 20px; fill: var(--sky-500); }
+
+.paw-trail {
+  display: flex;
+  gap: 10px;
+  opacity: 0.5;
+  margin-bottom: 6px;
+}
+.paw-trail svg { width: 16px; height: 16px; fill: var(--sky-400); }
+.paw-trail svg:nth-child(2) { transform: translateY(6px) rotate(15deg); }
+.paw-trail svg:nth-child(3) { transform: translateY(2px) rotate(-8deg); }
+.paw-trail svg:nth-child(4) { transform: translateY(8px) rotate(20deg); }
+
+/* ---------- Navbar ---------- */
+.navbar-pethome {
+  background: var(--white) !important;
+  border-bottom: 3px solid var(--sky-300);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  box-shadow: 0 4px 14px rgba(69, 166, 245, 0.1);
+  padding-top: 0.7rem;
+  padding-bottom: 0.7rem;
+}
+
+.navbar-pethome .navbar-brand {
+  color: var(--navy-700) !important;
+  font-weight: 700;
+  font-size: 1.7rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.navbar-pethome .navbar-brand svg {
+  width: 30px;
+  height: 30px;
+  fill: var(--sky-500);
+  transition: transform 0.2s ease;
+}
+.navbar-pethome .navbar-brand:hover svg {
+  transform: rotate(-12deg) scale(1.1);
+}
+
+.navbar-pethome .nav-link {
+  color: var(--navy-700) !important;
+  font-weight: 600;
+  border-radius: var(--radius-pill);
+  padding: 8px 16px !important;
+  margin: 0 2px;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+.navbar-pethome .nav-link:hover {
+  background: var(--sky-100);
+  color: var(--sky-600) !important;
+  transform: translateY(-1px);
+}
+
+.navbar-pethome .nav-link.active-link {
+  background: var(--sky-500);
+  color: var(--white) !important;
+}
+
+.navbar-pethome .user-greet {
+  color: var(--ink-soft) !important;
+  font-size: 0.92rem;
+}
+
+.navbar-toggler { border-color: var(--sky-300) !important; border-radius: var(--radius-sm) !important; }
+
+/* ---------- Hero (หน้าแรก) ---------- */
+.hero-pethome {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(160deg, var(--sky-400), var(--sky-600) 75%);
+  border-radius: var(--radius-xl);
+  padding: 46px 40px;
+  color: var(--white);
+  margin-bottom: 0;
+  box-shadow: var(--shadow-soft);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.hero-text { flex: 1 1 300px; position: relative; z-index: 2; }
+
+.hero-pethome h1 {
+  color: var(--white);
+  font-weight: 700;
+  font-size: 2.4rem;
+  margin-bottom: 10px;
+}
+
+.hero-pethome p {
+  color: #eaf6ff;
+  font-size: 1.08rem;
+  max-width: 460px;
+}
+
+.hero-blob {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+}
+.hero-blob.b1 { width: 220px; height: 220px; top: -80px; right: -60px; }
+.hero-blob.b2 { width: 140px; height: 140px; bottom: -50px; left: 30%; }
+
+.hero-mascot { flex: 0 0 220px; max-width: 220px; position: relative; z-index: 2; }
+.hero-mascot svg { width: 100%; height: auto; }
+
+.hero-wave {
+  display: block;
+  width: 100%;
+  margin-top: -1px;
+}
+.hero-wave svg { display: block; width: 100%; height: 46px; }
+
+/* ---------- การ์ดค้นหา ---------- */
+.search-panel {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  padding: 22px;
+  box-shadow: var(--shadow-card);
+  margin: -34px 0 34px;
+  border: 1px solid var(--sky-200);
+  position: relative;
+  z-index: 3;
+}
+
+/* ---------- การ์ดสัตว์ ---------- */
+.pet-card {
+  background: var(--white);
+  border: 2px solid var(--sky-200);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  height: 100%;
+  position: relative;
+}
+
+.pet-card:hover {
+  transform: translateY(-6px) rotate(-0.4deg);
+  box-shadow: var(--shadow-soft);
+  border-color: var(--sky-400);
+}
+
+.pet-image-wrap { position: relative; }
 
 .pet-image {
-    height: 200px;
-    object-fit: cover;
+  height: 200px;
+  object-fit: cover;
+  width: 100%;
 }
+
+.pet-sticker {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: var(--white);
+  border-radius: var(--radius-pill);
+  padding: 4px 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  box-shadow: 0 3px 8px rgba(28,63,102,0.18);
+  transform: rotate(4deg);
+}
+.pet-sticker.available { color: var(--sky-600); }
+.pet-sticker.adopted { color: var(--ink-soft); }
 
 .pet-image-small {
-    width: 80px;
-    height: 80px;
-    object-fit: cover;
-    border-radius: 6px;
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  border: 2px solid var(--sky-200);
 }
 
-.navbar-brand {
-    font-size: 1.4rem;
+.pet-card .card-body { padding: 18px; }
+
+.pet-card .card-title {
+  color: var(--navy-700);
+  font-weight: 700;
+  font-family: "Mali", sans-serif;
+  font-size: 1.25rem;
 }
 
-.card:hover {
-    transform: translateY(-3px);
-    transition: 0.2s;
+.pet-tag {
+  display: inline-block;
+  background: var(--sky-100);
+  color: var(--sky-600);
+  border-radius: var(--radius-pill);
+  padding: 4px 13px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin-right: 4px;
+  margin-bottom: 4px;
+}
+
+/* ---------- ปุ่ม (แบบ pill น่ารัก) ---------- */
+.btn {
+  border-radius: var(--radius-pill) !important;
+  font-weight: 600;
+  padding: 9px 20px;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.btn:active { transform: translateY(1px) scale(0.98); }
+
+.btn-primary {
+  background: var(--sky-500);
+  border-color: var(--sky-500);
+  box-shadow: var(--shadow-pop);
+}
+.btn-primary:hover, .btn-primary:focus {
+  background: var(--sky-600);
+  border-color: var(--sky-600);
+  transform: translateY(-2px);
+}
+
+.btn-outline-primary {
+  color: var(--sky-600);
+  border: 2px solid var(--sky-300);
+  background: var(--white);
+}
+.btn-outline-primary:hover {
+  background: var(--sky-500);
+  border-color: var(--sky-500);
+  transform: translateY(-2px);
+}
+
+.btn-outline-secondary {
+  border: 2px solid var(--sky-200);
+  color: var(--ink-soft);
+}
+
+.btn-outline-warning {
+  border: 2px solid var(--sun-400);
+  color: #9c6f00;
+  background: var(--white);
+}
+.btn-outline-warning:hover { background: var(--sun-400); color: #4a3400; }
+
+.btn-outline-danger {
+  border: 2px solid var(--blossom-400);
+  color: #c23a63;
+  background: var(--white);
+}
+.btn-outline-danger:hover { background: var(--blossom-400); color: var(--white); }
+
+.btn-success {
+  background: var(--mint-400);
+  border-color: var(--mint-400);
+  color: var(--navy-900);
+}
+.btn-success:hover { background: #48bd8c; border-color: #48bd8c; }
+
+.btn-danger {
+  background: var(--blossom-400);
+  border-color: var(--blossom-400);
+}
+.btn-danger:hover { background: #f5789f; border-color: #f5789f; }
+
+.btn-sm { padding: 6px 14px; font-size: 0.85rem; }
+
+/* ---------- ฟอร์ม ---------- */
+.form-panel {
+  background: var(--white);
+  border-radius: var(--radius-xl);
+  padding: 32px;
+  box-shadow: var(--shadow-card);
+  border: 2px solid var(--sky-200);
+}
+
+.form-label {
+  color: var(--navy-700);
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.form-control, .form-select {
+  border: 2px solid var(--sky-200);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+}
+
+.form-control:focus, .form-select:focus {
+  border-color: var(--sky-500);
+  box-shadow: 0 0 0 0.2rem rgba(69, 166, 245, 0.2);
+}
+
+/* ---------- ตาราง ---------- */
+.table-pethome {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+  border: 2px solid var(--sky-200);
+}
+
+.table-pethome thead { background: var(--sky-100); }
+
+.table-pethome thead th {
+  color: var(--navy-700);
+  font-weight: 700;
+  border-bottom: 2px solid var(--sky-300);
+  padding: 14px;
+}
+
+.table-pethome td, .table-pethome th {
+  vertical-align: middle;
+  border-color: var(--sky-200) !important;
+  padding: 12px 14px;
+}
+
+/* ---------- Badge สถานะ ---------- */
+.badge {
+  border-radius: var(--radius-pill);
+  padding: 6px 13px;
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+.badge-available { background: var(--sky-500); color: var(--white); }
+.badge-adopted { background: var(--ink-soft); color: var(--white); }
+.badge-pending { background: var(--sun-400); color: #4a3400; }
+.badge-approved { background: var(--mint-400); color: var(--navy-900); }
+.badge-rejected { background: var(--blossom-400); color: var(--white); }
+
+/* ---------- Alert ---------- */
+.alert-info {
+  background: var(--sky-100);
+  border: 2px solid var(--sky-300);
+  color: var(--navy-700);
+  border-radius: var(--radius-md);
+  font-weight: 500;
+}
+
+/* ---------- Empty state (ยังไม่มีข้อมูล) ---------- */
+.empty-state {
+  text-align: center;
+  padding: 50px 20px;
+  color: var(--ink-soft);
+}
+.empty-state svg { width: 100px; height: 100px; margin-bottom: 14px; opacity: 0.85; }
+.empty-state p { font-size: 1.05rem; margin: 0; }
+
+/* ---------- Footer ---------- */
+.footer-pethome {
+  text-align: center;
+  padding: 24px 0 40px;
+  color: var(--ink-soft);
+  font-family: "Mali", sans-serif;
+  font-size: 1rem;
+}
+
+/* ---------- Auth (login/register) ---------- */
+.auth-wrapper {
+  min-height: 60vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-card {
+  background: var(--white);
+  border-radius: var(--radius-xl);
+  padding: 38px;
+  box-shadow: var(--shadow-soft);
+  border: 2px solid var(--sky-200);
+  width: 100%;
+  max-width: 420px;
+  position: relative;
+}
+
+.auth-card h2 { text-align: center; }
+
+.auth-icon {
+  display: block;
+  margin: 0 auto 14px;
+  width: 54px;
+  height: 54px;
+  fill: var(--sky-500);
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 767px) {
+  .hero-pethome { padding: 34px 24px; text-align: center; justify-content: center; }
+  .hero-mascot { display: none; }
+  .search-panel { margin-top: 0; }
 }
