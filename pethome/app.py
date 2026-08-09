@@ -1,24 +1,23 @@
 """
 PetHome - ระบบรับเลี้ยงสัตว์
 Backend: Flask + SQLite
-โค้ดเขียนแบบพื้นฐาน อ่านง่าย เข้าใจง่าย เหมาะสำหรับผู้เริ่มต้น
 """
 
 import os
 import sqlite3
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, session, flash
-from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash #แอดมินไม่เห็นรหัสของผู้ใช้
 from werkzeug.utils import secure_filename
 
 # ---------- ตั้งค่าเบื้องต้น ----------
 app = Flask(__name__)
-app.secret_key = "pethome-secret-key"  # ใช้สำหรับ session (โปรเจกต์จริงควรเปลี่ยนเป็นค่าลับ)
+app.secret_key = "pethome-secret-key"  # ใช้สำหรับ session 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATABASE = os.path.join(BASE_DIR, "pethome.db")
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads")
-ALLOWED_EXT = {"png", "jpg", "jpeg", "gif"}
+ALLOWED_EXT = {"png", "jpg", "jpeg", "gif"} #อนุญาตให้อัปโหลดเฉพาะไฟล์รูป
 
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
