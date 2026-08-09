@@ -16,10 +16,9 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "pethome-secret-key")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# หมายเหตุสำคัญสำหรับการขึ้น Railway:
-# Railway จะสร้างฐานข้อมูล MySQL ให้อัตโนมัติ พร้อม "inject" ค่าตัวแปรเหล่านี้เข้ามาให้เอง
-# (MYSQLHOST, MYSQLPORT, MYSQLUSER, MYSQLPASSWORD, MYSQLDATABASE)
-# เราจึงอ่านค่าจาก os.environ ก่อนเสมอ ถ้าไม่มี (เช่นตอนรันในเครื่องตัวเอง)
+# หมายเหตุสำคัญ:
+# แพลตฟอร์ม cloud อย่าง Aiven จะสร้างฐานข้อมูล MySQL ให้ แล้วให้ค่าการเชื่อมต่อมา
+# เราตั้งให้อ่านค่าจาก environment variable ก่อนเสมอ ถ้าไม่มี (เช่นตอนรันในเครื่องตัวเอง)
 # ค่อย fallback ไปใช้ค่าเดิมที่ตั้งไว้สำหรับ localhost
 DB_CONFIG = {
     "host": os.environ.get("MYSQLHOST", "localhost"),
@@ -28,6 +27,14 @@ DB_CONFIG = {
     "password": os.environ.get("MYSQLPASSWORD", "123456"),
     "database": os.environ.get("MYSQLDATABASE", "pethome"),
 }
+
+# Aiven (และผู้ให้บริการ MySQL บนคลาวด์ส่วนใหญ่) บังคับให้เชื่อมต่อผ่าน SSL เท่านั้น
+# ถ้ามีไฟล์ใบรับรอง ca.pem วางไว้ในโฟลเดอร์เดียวกับ app.py ระบบจะเปิดใช้ SSL ให้อัตโนมัติ
+# ถ้าไม่มีไฟล์นี้ (เช่นตอนรันกับ MySQL ในเครื่องตัวเองที่ไม่ได้ตั้ง SSL) จะเชื่อมต่อแบบปกติ
+CA_CERT_PATH = os.path.join(BASE_DIR, "ca.pem")
+if os.path.exists(CA_CERT_PATH):
+    DB_CONFIG["ssl_ca"] = CA_CERT_PATH
+    DB_CONFIG["ssl_verify_cert"] = True
 
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads")
 ALLOWED_EXT = {"png", "jpg", "jpeg", "gif"} #อนุญาตให้อัปโหลดเฉพาะไฟล์รูป
