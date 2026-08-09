@@ -4,7 +4,7 @@ Backend: Flask + SQLite
 """
 
 import os
-import sqlite3
+import mysql.connector
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from werkzeug.security import generate_password_hash, check_password_hash #แอดมินไม่เห็นรหัสของผู้ใช้
@@ -13,9 +13,15 @@ from werkzeug.utils import secure_filename
 # ---------- ตั้งค่าเบื้องต้น ----------
 app = Flask(__name__)
 app.secret_key = "pethome-secret-key"  # ใช้สำหรับ session 
-
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATABASE = os.path.join(BASE_DIR, "pethome.db")
+
+DB_CONFIG = {
+    "host": "localhost",
+    "user": "root",
+    "password": "123456",
+    "database": "pethome"
+}
+
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads")
 ALLOWED_EXT = {"png", "jpg", "jpeg", "gif"} #อนุญาตให้อัปโหลดเฉพาะไฟล์รูป
 
@@ -30,9 +36,8 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # ---------- ฟังก์ชันช่วยเหลือ (Helper) ----------
 
 def get_db():
-    """เปิดการเชื่อมต่อฐานข้อมูล"""
-    conn = sqlite3.connect(DATABASE)
-    conn.row_factory = sqlite3.Row  # ให้ดึงข้อมูลแบบ dict ได้
+    """เปิดการเชื่อมต่อ MySQL"""
+    conn = mysql.connector.connect(**DB_CONFIG)
     return conn
 
 
@@ -115,11 +120,11 @@ def home():
     params = []
 
     if pet_type:
-        query += " AND type = ?"
+        query += " AND type = %s"
         params.append(pet_type)
 
     if province:
-        query += " AND province LIKE ?"
+        query += " AND province LIKE %s"
         params.append(f"%{province}%")
 
     query += " ORDER BY created_at DESC"
@@ -143,14 +148,14 @@ def register():
         conn = get_db()
         try:
             conn.execute(
-                "INSERT INTO User (name, email, password) VALUES (?, ?, ?)",
+                "INSERT INTO User (name, email, password) VALUES (%s, %s, %s)",
                 (name, email, hashed_password),
             )
             conn.commit()
             conn.close()
             flash("สมัครสมาชิกสำเร็จ กรุณาเข้าสู่ระบบ")
             return redirect(url_for("login"))
-        except sqlite3.IntegrityError:
+        except mysql.connector.IntegrityError:
             conn.close()
             flash("อีเมลนี้ถูกใช้งานแล้ว")
             return redirect(url_for("register"))
@@ -165,7 +170,7 @@ def login():
         password = request.form["password"]
 
         conn = get_db()
-        user = conn.execute("SELECT * FROM User WHERE email = ?", (email,)).fetchone()
+        user = conn.execute("SELECT * FROM User WHERE email = %s", (email,)).fetchone()
         conn.close()
 
         if user and check_password_hash(user["password"], password):
@@ -223,7 +228,7 @@ def add_pet():
         conn.execute(
             """INSERT INTO Pet (owner_id, name, type, gender, age, province,
                description, image, status, created_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Available', ?)""",
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'Available', %s)""",
             (session["user_id"], name, pet_type, gender, age, province,
              description, image_filename, datetime.now().isoformat()),
         )
@@ -240,7 +245,7 @@ def add_pet():
 @login_required
 def edit_pet(pet_id):
     conn = get_db()
-    pet = conn.execute("SELECT * FROM Pet WHERE pet_id = ?", (pet_id,)).fetchone()
+    pet = conn.execute("SELECT * FROM Pet WHERE pet_id = %s", (pet_id,)).fetchone()
 
     # เช็คว่าเป็นเจ้าของประกาศจริงหรือไม่
     if pet is None or pet["owner_id"] != session["user_id"]:
@@ -273,8 +278,8 @@ def edit_pet(pet_id):
                 flash("ไฟล์รูปภาพต้องเป็นนามสกุล png, jpg, jpeg หรือ gif เท่านั้น (ใช้รูปเดิมไว้ก่อน)")
 
         conn.execute(
-            """UPDATE Pet SET name=?, type=?, gender=?, age=?, province=?,
-               description=?, image=?, status=? WHERE pet_id=?""",
+            """UPDATE Pet SET name=%s, type=%s, gender=%s, age=%s, province=%s,
+               description=%s, image=%s, status=%s WHERE pet_id=%s""",
             (name, pet_type, gender, age, province, description,
              image_filename, status, pet_id),
         )
@@ -292,11 +297,11 @@ def edit_pet(pet_id):
 @login_required
 def delete_pet(pet_id):
     conn = get_db()
-    pet = conn.execute("SELECT * FROM Pet WHERE pet_id = ?", (pet_id,)).fetchone()
+    pet = conn.execute("SELECT * FROM Pet WHERE pet_id = %s", (pet_id,)).fetchone()
 
     if pet and pet["owner_id"] == session["user_id"]:
-        conn.execute("DELETE FROM Pet WHERE pet_id = ?", (pet_id,))
-        conn.execute("DELETE FROM Adoption WHERE pet_id = ?", (pet_id,))
+        conn.execute("DELETE FROM Pet WHERE pet_id = %s", (pet_id,))
+        conn.execute("DELETE FROM Adoption WHERE pet_id = %s", (pet_id,))
         conn.commit()
         flash("ลบประกาศสำเร็จ")
     else:
@@ -311,7 +316,7 @@ def delete_pet(pet_id):
 def my_pets():
     conn = get_db()
     pets = conn.execute(
-        "SELECT * FROM Pet WHERE owner_id = ? ORDER BY created_at DESC",
+        "SELECT * FROM Pet WHERE owner_id = %s ORDER BY created_at DESC",
         (session["user_id"],),
     ).fetchall()
     conn.close()
@@ -326,7 +331,7 @@ def pet_detail(pet_id):
     pet = conn.execute(
         """SELECT Pet.*, User.name AS owner_name, User.email AS owner_email
            FROM Pet JOIN User ON Pet.owner_id = User.user_id
-           WHERE Pet.pet_id = ?""",
+           WHERE Pet.pet_id = %s""",
         (pet_id,),
     ).fetchone()
     conn.close()
@@ -349,7 +354,7 @@ def send_adoption_request(pet_id):
     conn = get_db()
     conn.execute(
         """INSERT INTO Adoption (pet_id, user_name, phone, message, status, created_at)
-           VALUES (?, ?, ?, ?, 'Pending', ?)""",
+           VALUES (%s, %s, %s, %s, 'Pending', %s)""",
         (pet_id, user_name, phone, message, datetime.now().isoformat()),
     )
     conn.commit()
@@ -368,7 +373,7 @@ def adoption_requests():
     requests_list = conn.execute(
         """SELECT Adoption.*, Pet.name AS pet_name, Pet.pet_id AS pet_id
            FROM Adoption JOIN Pet ON Adoption.pet_id = Pet.pet_id
-           WHERE Pet.owner_id = ?
+           WHERE Pet.owner_id = %s
            ORDER BY Adoption.created_at DESC""",
         (session["user_id"],),
     ).fetchall()
@@ -384,13 +389,13 @@ def approve_request(request_id):
     req = conn.execute(
         """SELECT Adoption.*, Pet.owner_id AS owner_id
            FROM Adoption JOIN Pet ON Adoption.pet_id = Pet.pet_id
-           WHERE Adoption.request_id = ?""",
+           WHERE Adoption.request_id = %s""",
         (request_id,),
     ).fetchone()
 
     if req and req["owner_id"] == session["user_id"]:
-        conn.execute("UPDATE Adoption SET status='Approved' WHERE request_id=?", (request_id,))
-        conn.execute("UPDATE Pet SET status='Adopted' WHERE pet_id=?", (req["pet_id"],))
+        conn.execute("UPDATE Adoption SET status='Approved' WHERE request_id=%s", (request_id,))
+        conn.execute("UPDATE Pet SET status='Adopted' WHERE pet_id=%s", (req["pet_id"],))
         conn.commit()
         flash("อนุมัติคำขอสำเร็จ")
 
@@ -405,12 +410,12 @@ def reject_request(request_id):
     req = conn.execute(
         """SELECT Adoption.*, Pet.owner_id AS owner_id
            FROM Adoption JOIN Pet ON Adoption.pet_id = Pet.pet_id
-           WHERE Adoption.request_id = ?""",
+           WHERE Adoption.request_id = %s""",
         (request_id,),
     ).fetchone()
 
     if req and req["owner_id"] == session["user_id"]:
-        conn.execute("UPDATE Adoption SET status='Rejected' WHERE request_id=?", (request_id,))
+        conn.execute("UPDATE Adoption SET status='Rejected' WHERE request_id=%s", (request_id,))
         conn.commit()
         flash("ปฏิเสธคำขอสำเร็จ")
 
