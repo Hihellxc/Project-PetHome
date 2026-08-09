@@ -12,14 +12,21 @@ from werkzeug.utils import secure_filename
 
 # ---------- ตั้งค่าเบื้องต้น ----------
 app = Flask(__name__)
-app.secret_key = "pethome-secret-key"  # ใช้สำหรับ session 
+# อ่าน secret key จาก environment variable ก่อน ถ้าไม่มีค่อยใช้ค่า default (สำหรับรันในเครื่องตัวเอง)
+app.secret_key = os.environ.get("SECRET_KEY", "pethome-secret-key")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
+# หมายเหตุสำคัญสำหรับการขึ้น Railway:
+# Railway จะสร้างฐานข้อมูล MySQL ให้อัตโนมัติ พร้อม "inject" ค่าตัวแปรเหล่านี้เข้ามาให้เอง
+# (MYSQLHOST, MYSQLPORT, MYSQLUSER, MYSQLPASSWORD, MYSQLDATABASE)
+# เราจึงอ่านค่าจาก os.environ ก่อนเสมอ ถ้าไม่มี (เช่นตอนรันในเครื่องตัวเอง)
+# ค่อย fallback ไปใช้ค่าเดิมที่ตั้งไว้สำหรับ localhost
 DB_CONFIG = {
-    "host": "localhost",
-    "user": "root",
-    "password": "123456",
-    "database": "pethome"
+    "host": os.environ.get("MYSQLHOST", "localhost"),
+    "port": int(os.environ.get("MYSQLPORT", 3306)),
+    "user": os.environ.get("MYSQLUSER", "root"),
+    "password": os.environ.get("MYSQLPASSWORD", "123456"),
+    "database": os.environ.get("MYSQLDATABASE", "pethome"),
 }
 
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads")
@@ -474,4 +481,11 @@ def reject_request(request_id):
 
 if __name__ == "__main__":
     init_db()
-    app.run(debug=True)
+    # รันแบบนี้ใช้สำหรับทดสอบในเครื่องตัวเองเท่านั้น
+    # ตอน deploy จริงบน Railway จะไม่ใช้บรรทัดนี้ แต่ใช้ gunicorn แทน (ดูไฟล์ Procfile)
+    port = int(os.environ.get("PORT", 5000))
+    debug_mode = os.environ.get("FLASK_DEBUG", "1") == "1"
+    app.run(host="0.0.0.0", port=port, debug=debug_mode)
+else:
+    # เมื่อรันผ่าน gunicorn (production) ให้สร้างตารางฐานข้อมูลตอนโมดูลถูก import ครั้งแรก
+    init_db()
