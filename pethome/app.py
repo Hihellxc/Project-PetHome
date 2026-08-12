@@ -41,6 +41,26 @@ ALLOWED_EXT = {"png", "jpg", "jpeg", "gif"} #อนุญาตให้อั�
 
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
+# รายชื่อ 77 จังหวัดของไทย ใช้แสดงเป็นตัวเลือกในช่องกรอกจังหวัด (พิมพ์ค้นหาได้ผ่าน <datalist>)
+THAI_PROVINCES = [
+    "กรุงเทพมหานคร", "กระบี่", "กาญจนบุรี", "กาฬสินธุ์", "กำแพงเพชร",
+    "ขอนแก่น", "จันทบุรี", "ฉะเชิงเทรา", "ชลบุรี", "ชัยนาท",
+    "ชัยภูมิ", "ชุมพร", "เชียงราย", "เชียงใหม่", "ตรัง",
+    "ตราด", "ตาก", "นครนายก", "นครปฐม", "นครพนม",
+    "นครราชสีมา", "นครศรีธรรมราช", "นครสวรรค์", "นนทบุรี", "นราธิวาส",
+    "น่าน", "บึงกาฬ", "บุรีรัมย์", "ปทุมธานี", "ประจวบคีรีขันธ์",
+    "ปราจีนบุรี", "ปัตตานี", "พระนครศรีอยุธยา", "พังงา", "พัทลุง",
+    "พิจิตร", "พิษณุโลก", "เพชรบุรี", "เพชรบูรณ์", "แพร่",
+    "ภูเก็ต", "มหาสารคาม", "มุกดาหาร", "แม่ฮ่องสอน", "ยโสธร",
+    "ยะลา", "ร้อยเอ็ด", "ระนอง", "ระยอง", "ราชบุรี",
+    "ลพบุรี", "ลำปาง", "ลำพูน", "เลย", "ศรีสะเกษ",
+    "สกลนคร", "สงขลา", "สตูล", "สมุทรปราการ", "สมุทรสงคราม",
+    "สมุทรสาคร", "สระแก้ว", "สระบุรี", "สิงห์บุรี", "สุโขทัย",
+    "สุพรรณบุรี", "สุราษฎร์ธานี", "สุรินทร์", "หนองคาย", "หนองบัวลำภู",
+    "อยุธยา", "อ่างทอง", "อำนาจเจริญ", "อุดรธานี", "อุตรดิตถ์",
+    "อุทัยธานี", "อุบลราชธานี",
+]
+
 # สร้างโฟลเดอร์เก็บรูปภาพไว้ล่วงหน้าเสมอ (เผื่อโฟลเดอร์ถูกลบ หรือรันครั้งแรกในเครื่องใหม่)
 # ถ้าไม่มีบรรทัดนี้ และโฟลเดอร์นี้ไม่มีอยู่จริง การอัปโหลดรูปจะทำให้ทั้งคำขอ error
 # และส่งผลให้ข้อมูลสัตว์เลี้ยงไม่ถูกบันทึกลงฐานข้อมูลเลย (แม้กรอกข้อมูลถูกต้องก็ตาม)
@@ -97,6 +117,12 @@ def init_db():
             pet_id INT NOT NULL,
             user_name VARCHAR(100) NOT NULL,
             phone VARCHAR(20) NOT NULL,
+            email VARCHAR(150),
+            province VARCHAR(100),
+            occupation VARCHAR(100),
+            pet_experience VARCHAR(20),
+            housing_type VARCHAR(50),
+            household_info TEXT,
             message TEXT,
             status VARCHAR(20) DEFAULT 'Pending',
             created_at DATETIME,
@@ -390,7 +416,7 @@ def pet_detail(pet_id):
         flash("ไม่พบประกาศนี้")
         return redirect(url_for("home"))
 
-    return render_template("pet_detail.html", pet=pet)
+    return render_template("pet_detail.html", pet=pet, provinces=THAI_PROVINCES)
 
 
 # ---------- ส่งคำขอรับเลี้ยง ----------
@@ -399,14 +425,23 @@ def pet_detail(pet_id):
 def send_adoption_request(pet_id):
     user_name = request.form["user_name"]
     phone = request.form["phone"]
+    email = request.form.get("email", "")
+    province = request.form.get("province", "")
+    occupation = request.form.get("occupation", "")
+    pet_experience = request.form.get("pet_experience", "")
+    housing_type = request.form.get("housing_type", "")
+    household_info = request.form.get("household_info", "")
     message = request.form["message"]
 
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute(
-        """INSERT INTO Adoption (pet_id, user_name, phone, message, status, created_at)
-           VALUES (%s, %s, %s, %s, 'Pending', %s)""",
-        (pet_id, user_name, phone, message, datetime.now()),
+        """INSERT INTO Adoption (pet_id, user_name, phone, email, province,
+           occupation, pet_experience, housing_type, household_info,
+           message, status, created_at)
+           VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'Pending', %s)""",
+        (pet_id, user_name, phone, email, province, occupation,
+         pet_experience, housing_type, household_info, message, datetime.now()),
     )
     conn.commit()
     cursor.close()
