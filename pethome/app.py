@@ -162,7 +162,23 @@ def home():
     province = request.args.get("province", "")
 
     conn = get_db()
-    cursor = conn.cursor(dictionary=True) # ใช้ dictionary=True เพื่อให้ผลลัพธ์เป็น dict แทน tuple
+
+    # ตรวจสอบว่า Render กำลังใช้ Database ตัวไหน
+    debug_cursor = conn.cursor()
+    debug_cursor.execute("SELECT DATABASE(), @@hostname")
+    db_info = debug_cursor.fetchone()
+    print("================================")
+    print("DATABASE:", db_info[0])
+    print("HOST:", db_info[1])
+
+    debug_cursor.execute("SELECT COUNT(*) FROM Pet")
+    pet_count = debug_cursor.fetchone()[0]
+    print("PET COUNT:", pet_count)
+    print("================================")
+
+    debug_cursor.close()
+
+    cursor = conn.cursor(dictionary=True)
 
     query = "SELECT * FROM Pet WHERE status = 'Available'"
     params = []
@@ -176,16 +192,20 @@ def home():
         params.append(f"%{province}%")
 
     query += " ORDER BY created_at DESC"
-    # หมายเหตุ: cursor.execute() ของ mysql.connector คืนค่า None (ไม่ใช่ cursor)
-    # จึงต่อ .fetchall() ท้าย execute() แบบ sqlite ไม่ได้ ต้องแยกเป็นคนละบรรทัด
+
     cursor.execute(query, params)
     pets = cursor.fetchall()
+
     cursor.close()
     conn.close()
 
-    return render_template("home.html", pets=pets, pet_type=pet_type, province=province, provinces=THAI_PROVINCES)
-
-
+    return render_template(
+        "home.html",
+        pets=pets,
+        pet_type=pet_type,
+        province=province,
+        provinces=THAI_PROVINCES
+    )
 # ---------- สมัครสมาชิก / เข้าสู่ระบบ / ออกจากระบบ ----------
 
 @app.route("/register", methods=["GET", "POST"])
