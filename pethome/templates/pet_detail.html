@@ -38,23 +38,80 @@
 
 {% if pet.status == 'Available' %}
 <div class="row justify-content-center">
-  <div class="col-md-6">
+  <div class="col-md-8">
     <div class="form-panel">
-      <h4 class="mb-3 text-center">แจ้งความประสงค์รับเลี้ยง</h4>
-      <form method="POST" action="{{ url_for('send_adoption_request', pet_id=pet.pet_id) }}">
-        <div class="mb-3">
-          <label class="form-label">ชื่อของคุณ</label>
+      <h4 class="mb-1 text-center">แจ้งความประสงค์รับเลี้ยง</h4>
+      <p class="text-center text-muted mb-3" style="font-size:0.9rem;">
+        ข้อมูลเพิ่มเติมด้านล่างช่วยให้เจ้าของตัดสินใจได้ง่ายขึ้น (ช่องที่ไม่มี * ไม่กรอกก็ได้)
+      </p>
+      <form method="POST" action="{{ url_for('send_adoption_request', pet_id=pet.pet_id) }}" class="row g-3">
+
+        <div class="col-md-6">
+          <label class="form-label">ชื่อของคุณ *</label>
           <input type="text" name="user_name" class="form-control" required>
         </div>
-        <div class="mb-3">
-          <label class="form-label">เบอร์โทรศัพท์</label>
+
+        <div class="col-md-6">
+          <label class="form-label">เบอร์โทรศัพท์ *</label>
           <input type="tel" name="phone" class="form-control" required>
         </div>
-        <div class="mb-3">
+
+        <div class="col-md-6">
+          <label class="form-label">อีเมลติดต่อกลับ</label>
+          <input type="email" name="email" class="form-control">
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label">จังหวัดที่พักอาศัย</label>
+          <!-- ใช้ input + datalist: พิมพ์ค้นหาได้ และเลือกจากรายชื่อจังหวัดทั้งหมดได้ -->
+          <input type="text" name="province" class="form-control" list="provinceList"
+                 placeholder="พิมพ์เพื่อค้นหาจังหวัด" autocomplete="off">
+          <datalist id="provinceList">
+            {% for p in provinces %}
+              <option value="{{ p }}">
+            {% endfor %}
+          </datalist>
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label">อาชีพ</label>
+          <input type="text" name="occupation" class="form-control">
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label">เคยเลี้ยงสัตว์มาก่อนหรือไม่</label>
+          <select name="pet_experience" class="form-select">
+            <option value="">-- ไม่ระบุ --</option>
+            <option value="เคย">เคย</option>
+            <option value="ไม่เคย">ไม่เคย</option>
+          </select>
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label">ลักษณะที่พัก</label>
+          <select name="housing_type" class="form-select">
+            <option value="">-- ไม่ระบุ --</option>
+            <option value="บ้านเดี่ยว">บ้านเดี่ยว</option>
+            <option value="ทาวน์เฮาส์">ทาวน์เฮาส์</option>
+            <option value="คอนโด/อพาร์ตเมนต์">คอนโด/อพาร์ตเมนต์</option>
+            <option value="อื่นๆ">อื่นๆ</option>
+          </select>
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label">สมาชิกในบ้าน / มีเด็กเล็กหรือสัตว์เลี้ยงอื่นมั้ย</label>
+          <input type="text" name="household_info" class="form-control"
+                 placeholder="เช่น อยู่คนเดียว, มีลูก 2 คน, มีแมวอยู่แล้ว 1 ตัว">
+        </div>
+
+        <div class="col-12">
           <label class="form-label">ข้อความถึงเจ้าของ</label>
           <textarea name="message" class="form-control" rows="3"></textarea>
         </div>
-        <button type="submit" class="btn btn-primary w-100">ส่งคำขอรับเลี้ยง</button>
+
+        <div class="col-12">
+          <button type="submit" class="btn btn-primary w-100">ส่งคำขอรับเลี้ยง</button>
+        </div>
       </form>
     </div>
   </div>
