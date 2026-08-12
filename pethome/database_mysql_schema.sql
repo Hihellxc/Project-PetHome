@@ -35,8 +35,17 @@ CREATE TABLE Adoption (
     message TEXT,
     status VARCHAR(20) DEFAULT 'Pending',
     created_at DATETIME,
-    FOREIGN KEY (pet_id) REFERENCES Pet(pet_id)
+    FOREIGN KEY (pet_id) REFERENCES Pet(pet_id),
 );
+
+
+ALTER TABLE Adoption
+  ADD COLUMN email VARCHAR(150) AFTER phone,
+  ADD COLUMN province VARCHAR(100) AFTER email,
+  ADD COLUMN occupation VARCHAR(100) AFTER province,
+  ADD COLUMN pet_experience VARCHAR(20) AFTER occupation,
+  ADD COLUMN housing_type VARCHAR(50) AFTER pet_experience,
+  ADD COLUMN household_info TEXT AFTER housing_type;
 
 -- หมายเหตุ: ถ้าใช้ MySQL จริง ให้เปลี่ยนใน app.py จาก sqlite3
 -- เป็น mysql-connector-python หรือ PyMySQL แทน
