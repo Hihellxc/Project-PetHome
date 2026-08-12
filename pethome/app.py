@@ -304,8 +304,12 @@ def add_pet():
             if allowed_file(image_file.filename):
                 try:
                     upload_result = cloudinary.uploader.upload(image_file)
-                    image_filename = upload_result["secure_url"]
-                    image_file.save(os.path.join(app.config["UPLOAD_FOLDER"], image_filename))
+                    image_url = upload_result["secure_url"]
+
+                    image_file.seek(0)
+                    local_filename = secure_filename(image_file.filename)
+                    image_file.save(os.path.join(app.config["UPLOAD_FOLDER"], local_filename))
+
                 except Exception:
                     image_filename = ""
                     flash("อัปโหลดรูปภาพไม่สำเร็จ แต่ข้อมูลอื่นถูกบันทึกแล้ว กรุณาแก้ไขประกาศเพื่อเพิ่มรูปใหม่")
