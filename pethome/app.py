@@ -6,10 +6,13 @@ Backend: Flask + MySQL
 import os
 import mysql.connector
 from datetime import datetime
+from dotenv import load_dotenv
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from werkzeug.security import generate_password_hash, check_password_hash #แอดมินไม่เห็นรหัสของผู้ใช้
 from werkzeug.utils import secure_filename
 
+
+load_dotenv() # โหลด environment variables จากไฟล์ .env (สำหรับรันในเครื่องตัวเอง)
 # ---------- ตั้งค่าเบื้องต้น ----------
 app = Flask(__name__)
 # อ่าน secret key จาก environment variable ก่อน ถ้าไม่มีค่อยใช้ค่า default (สำหรับรันในเครื่องตัวเอง)
