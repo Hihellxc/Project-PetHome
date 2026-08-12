@@ -320,9 +320,12 @@ def add_pet():
 
 
                 except Exception as e:
-                    print("Image upload error:", repr(e))
+                    print("================================")
+                    print("CLOUDINARY ERROR:", repr(e))
+                    print("================================")
                     image_filename = ""
-                    flash("อัปโหลดรูปภาพไม่สำเร็จ แต่ข้อมูลอื่นถูกบันทึกแล้ว")
+                    flash("อัปโหลดรูปภาพไม่สำเร็จ กรุณาดู Error ใน Terminal/Render Logs")
+
             else:
                 flash("ไฟล์รูปภาพต้องเป็นนามสกุล png, jpg, jpeg หรือ gif เท่านั้น (บันทึกประกาศโดยไม่มีรูป)")
 
