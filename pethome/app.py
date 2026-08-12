@@ -299,32 +299,15 @@ def add_pet():
         # เราจะ "ไม่ปล่อยให้ error ล้มทั้งคำขอ" แต่จะบันทึกประกาศต่อไปโดยไม่มีรูป
         # แล้วแจ้งเตือนผู้ใช้ให้รู้ตัว
         image_file = request.files.get("image")
-
-        print("================================")
-        print("IMAGE FILE:", image_file)
-        print("IMAGE FILENAME:", image_file.filename if image_file else None)
-        print("================================")
-
         image_filename = ""
 
         if image_file and image_file.filename:
             if allowed_file(image_file.filename):
                 try:
                     # 1. อัปโหลดไป Cloudinary
+                    
                     upload_result = cloudinary.uploader.upload(image_file)
-                    image_url = upload_result["secure_url"]
-
-                    # 2. บันทึกไฟล์ไว้ในเครื่อง
-                    image_file.seek(0)
-                    local_filename = secure_filename(image_file.filename)
-                    image_file.save(
-                        os.path.join(app.config["UPLOAD_FOLDER"], local_filename)
-                    
-                    )
-                    
-                    # เก็บ URL ของ Cloudinary ลง MySQL
-                    image_filename = image_url
-
+                    image_filename = upload_result["secure_url"]
 
                 except Exception as e:
                     print("================================")
