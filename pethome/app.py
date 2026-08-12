@@ -527,7 +527,6 @@ def reject_request(request_id):
 if __name__ == "__main__":
     init_db()
     # รันแบบนี้ใช้สำหรับทดสอบในเครื่องตัวเองเท่านั้น
-    # ตอน deploy จริงบน Railway จะไม่ใช้บรรทัดนี้ แต่ใช้ gunicorn แทน (ดูไฟล์ Procfile)
     port = int(os.environ.get("PORT", 5000))
     debug_mode = os.environ.get("FLASK_DEBUG", "1") == "1"
     app.run(host="0.0.0.0", port=port, debug=debug_mode)
