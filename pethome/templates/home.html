@@ -76,7 +76,13 @@
     </div>
     <div class="col-md-4">
       <label class="form-label mb-1">จังหวัด</label>
-      <input type="text" name="province" class="form-control" placeholder="เช่น เชียงใหม่" value="{{ province }}">
+      <input type="text" name="province" class="form-control" placeholder="พิมพ์เพื่อค้นหาจังหวัด"
+             list="provinceList" autocomplete="off" value="{{ province }}">
+      <datalist id="provinceList">
+        {% for p in provinces %}
+          <option value="{{ p }}">
+        {% endfor %}
+      </datalist>
     </div>
     <div class="col-md-2">
       <button type="submit" class="btn btn-primary w-100">🔍 ค้นหา</button>

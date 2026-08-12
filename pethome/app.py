@@ -183,7 +183,7 @@ def home():
     cursor.close()
     conn.close()
 
-    return render_template("home.html", pets=pets, pet_type=pet_type, province=province)
+    return render_template("home.html", pets=pets, pet_type=pet_type, province=province, provinces=THAI_PROVINCES)
 
 
 # ---------- สมัครสมาชิก / เข้าสู่ระบบ / ออกจากระบบ ----------
@@ -301,7 +301,7 @@ def add_pet():
         flash("เพิ่มประกาศสำเร็จ")
         return redirect(url_for("my_pets"))
 
-    return render_template("add_pet.html")
+    return render_template("add_pet.html", provinces=THAI_PROVINCES)
 
 
 @app.route("/edit_pet/<int:pet_id>", methods=["GET", "POST"])
@@ -360,7 +360,7 @@ def edit_pet(pet_id):
 
     cursor.close()
     conn.close()
-    return render_template("edit_pet.html", pet=pet)
+    return render_template("edit_pet.html", pet=pet, provinces=THAI_PROVINCES)
 
 
 @app.route("/delete_pet/<int:pet_id>")

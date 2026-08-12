@@ -40,7 +40,13 @@
 
     <div class="col-md-6">
       <label class="form-label">จังหวัด</label>
-      <input type="text" name="province" class="form-control" required>
+      <input type="text" name="province" class="form-control" list="provinceList"
+             placeholder="พิมพ์เพื่อค้นหาจังหวัด" autocomplete="off" required>
+      <datalist id="provinceList">
+        {% for p in provinces %}
+          <option value="{{ p }}">
+        {% endfor %}
+      </datalist>
     </div>
 
     <div class="col-12">
