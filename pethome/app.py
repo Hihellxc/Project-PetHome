@@ -29,12 +29,15 @@ DB_CONFIG = {
 }
 
 # Aiven (และผู้ให้บริการ MySQL บนคลาวด์ส่วนใหญ่) บังคับให้เชื่อมต่อผ่าน SSL เท่านั้น
-# ถ้ามีไฟล์ใบรับรอง ca.pem วางไว้ในโฟลเดอร์เดียวกับ app.py ระบบจะเปิดใช้ SSL ให้อัตโนมัติ
-# ถ้าไม่มีไฟล์นี้ (เช่นตอนรันกับ MySQL ในเครื่องตัวเองที่ไม่ได้ตั้ง SSL) จะเชื่อมต่อแบบปกติ
-CA_CERT_PATH = os.path.join(BASE_DIR, "ca.pem")
-if os.path.exists(CA_CERT_PATH):
-    DB_CONFIG["ssl_ca"] = CA_CERT_PATH
-    DB_CONFIG["ssl_verify_cert"] = True
+# หมายเหตุ: เดิมเคยตั้งให้ตรวจสอบใบรับรอง (ssl_verify_cert=True) ด้วยไฟล์ ca.pem
+# แต่พบว่าทำให้เกิด error "SSL routines::certificate verify failed" ทั้งตอนรันในเครื่อง
+# และตอน deploy บน Render (สาเหตุมักมาจากใบรับรองไม่ตรงเวอร์ชัน/หมุนใหม่/ปัญหาการตรวจสอบ
+# บนระบบปฏิบัติการที่ต่างกัน) จึงเปลี่ยนมาใช้ "เชื่อมต่อแบบเข้ารหัส แต่ไม่ตรวจสอบใบรับรอง"
+# แทน ข้อมูลยังถูกเข้ารหัสระหว่างทางเหมือนเดิม (ปลอดภัยเพียงพอสำหรับโปรเจกต์นี้)
+# แค่ไม่ต้องพึ่งไฟล์ ca.pem อีกต่อไป
+DB_CONFIG["ssl_disabled"] = False
+DB_CONFIG["ssl_verify_cert"] = False
+DB_CONFIG["ssl_verify_identity"] = False
 
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads")
 ALLOWED_EXT = {"png", "jpg", "jpeg", "gif"} #อนุญาตให้อัปโหลดเฉพาะไฟล์รูป
