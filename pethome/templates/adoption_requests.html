@@ -4,57 +4,47 @@
 {% block content %}
 <h2 class="mb-4">📨 คำขอรับเลี้ยงที่ได้รับ</h2>
 
-<table class="table table-pethome align-middle">
-  <thead>
-    <tr>
-      <th>สัตว์เลี้ยง</th>
-      <th>ชื่อผู้ขอ</th>
-      <th>เบอร์โทร</th>
-      <th>ข้อความ</th>
-      <th>สถานะ</th>
-      <th>จัดการ</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for req in requests %}
-    <tr>
-      <td>{{ req.pet_name }}</td>
-      <td>{{ req.user_name }}</td>
-      <td>{{ req.phone }}</td>
-      <td>{{ req.message }}</td>
-      <td>
-        {% if req.status == 'Pending' %}
-          <span class="badge badge-pending">รอดำเนินการ</span>
-        {% elif req.status == 'Approved' %}
-          <span class="badge badge-approved">อนุมัติแล้ว</span>
-        {% else %}
-          <span class="badge badge-rejected">ปฏิเสธแล้ว</span>
-        {% endif %}
-      </td>
-      <td>
-        {% if req.status == 'Pending' %}
-          <a href="{{ url_for('approve_request', request_id=req.request_id) }}"
-             class="btn btn-sm btn-success">อนุมัติ</a>
-          <a href="{{ url_for('reject_request', request_id=req.request_id) }}"
-             class="btn btn-sm btn-danger">ปฏิเสธ</a>
-        {% else %}
-          <span class="text-muted">-</span>
-        {% endif %}
-      </td>
-    </tr>
-    {% else %}
-    <tr>
-      <td colspan="6" class="p-0">
-        <div class="empty-state">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <rect x="4" y="5" width="16" height="14" rx="3"/>
-            <path d="M4 7l8 6 8-6" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          <p>ยังไม่มีคำขอรับเลี้ยงเข้ามา รอน้องๆ มีคนสนใจกันนะ 💌</p>
-        </div>
-      </td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+{% for req in requests %}
+<div class="form-panel mb-3">
+  <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+    <div>
+      <h5 class="mb-1">{{ req.user_name }} <span class="text-muted" style="font-size:0.9rem;">ขอรับเลี้ยง {{ req.pet_name }}</span></h5>
+      {% if req.status == 'Pending' %}
+        <span class="badge badge-pending">รอดำเนินการ</span>
+      {% elif req.status == 'Approved' %}
+        <span class="badge badge-approved">อนุมัติแล้ว</span>
+      {% else %}
+        <span class="badge badge-rejected">ปฏิเสธแล้ว</span>
+      {% endif %}
+    </div>
+    {% if req.status == 'Pending' %}
+    <div>
+      <a href="{{ url_for('approve_request', request_id=req.request_id) }}"
+         class="btn btn-sm btn-success">อนุมัติ</a>
+      <a href="{{ url_for('reject_request', request_id=req.request_id) }}"
+         class="btn btn-sm btn-danger">ปฏิเสธ</a>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="row g-2" style="font-size:0.95rem;">
+    <div class="col-md-4"><strong>เบอร์โทร:</strong> {{ req.phone }}</div>
+    <div class="col-md-4"><strong>อีเมล:</strong> {{ req.email or "-" }}</div>
+    <div class="col-md-4"><strong>จังหวัดที่พัก:</strong> {{ req.province or "-" }}</div>
+    <div class="col-md-4"><strong>อาชีพ:</strong> {{ req.occupation or "-" }}</div>
+    <div class="col-md-4"><strong>เคยเลี้ยงสัตว์มาก่อน:</strong> {{ req.pet_experience or "-" }}</div>
+    <div class="col-md-4"><strong>ลักษณะที่พัก:</strong> {{ req.housing_type or "-" }}</div>
+    <div class="col-12"><strong>สมาชิกในบ้าน/สัตว์เลี้ยงอื่น:</strong> {{ req.household_info or "-" }}</div>
+    <div class="col-12"><strong>ข้อความ:</strong> {{ req.message or "-" }}</div>
+  </div>
+</div>
+{% else %}
+<div class="empty-state">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+    <rect x="4" y="5" width="16" height="14" rx="3"/>
+    <path d="M4 7l8 6 8-6" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+  <p>ยังไม่มีคำขอรับเลี้ยงเข้ามา รอน้องๆ มีคนสนใจกันนะ 💌</p>
+</div>
+{% endfor %}
 {% endblock %}
