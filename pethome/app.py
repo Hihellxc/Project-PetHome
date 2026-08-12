@@ -4,6 +4,8 @@ Backend: Flask + MySQL
 """
 
 import os
+import cloudinary
+import cloudinary.uploader
 import mysql.connector
 from datetime import datetime
 from dotenv import load_dotenv
@@ -13,6 +15,12 @@ from werkzeug.utils import secure_filename
 
 
 load_dotenv() # โหลด environment variables จากไฟล์ .env (สำหรับรันในเครื่องตัวเอง)
+cloudinary.config( #ในการอัปโหลดรูปภาพไปเก็บบน Cloudinary (ไม่ต้องเก็บไว้ในเครื่องตัวเอง)
+    cloud_name=os.environ.get("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.environ.get("CLOUDINARY_API_KEY"),
+    api_secret=os.environ.get("CLOUDINARY_API_SECRET"),
+    secure=True
+)
 # ---------- ตั้งค่าเบื้องต้น ----------
 app = Flask(__name__)
 # อ่าน secret key จาก environment variable ก่อน ถ้าไม่มีค่อยใช้ค่า default (สำหรับรันในเครื่องตัวเอง)
@@ -295,13 +303,12 @@ def add_pet():
         if image_file and image_file.filename:
             if allowed_file(image_file.filename):
                 try:
-                    image_filename = secure_filename(
-                        f"{datetime.now().timestamp()}_{image_file.filename}"
-                    )
+                    upload_result = cloudinary.uploader.upload(image_file)
+                    image_filename = upload_result["secure_url"]
                     image_file.save(os.path.join(app.config["UPLOAD_FOLDER"], image_filename))
-                except OSError:
+                except Exception:
                     image_filename = ""
-                    flash("บันทึกรูปภาพไม่สำเร็จ แต่ข้อมูลอื่นถูกบันทึกแล้ว กรุณาแก้ไขประกาศเพื่อเพิ่มรูปใหม่")
+                    flash("อัปโหลดรูปภาพไม่สำเร็จ แต่ข้อมูลอื่นถูกบันทึกแล้ว กรุณาแก้ไขประกาศเพื่อเพิ่มรูปใหม่")
             else:
                 flash("ไฟล์รูปภาพต้องเป็นนามสกุล png, jpg, jpeg หรือ gif เท่านั้น (บันทึกประกาศโดยไม่มีรูป)")
 
@@ -356,13 +363,10 @@ def edit_pet(pet_id):
         if image_file and image_file.filename:
             if allowed_file(image_file.filename):
                 try:
-                    new_filename = secure_filename(
-                        f"{datetime.now().timestamp()}_{image_file.filename}"
-                    )
-                    image_file.save(os.path.join(app.config["UPLOAD_FOLDER"], new_filename))
-                    image_filename = new_filename  # เปลี่ยนเป็นรูปใหม่เมื่อบันทึกสำเร็จเท่านั้น
-                except OSError:
-                    flash("บันทึกรูปภาพใหม่ไม่สำเร็จ ระบบใช้รูปเดิมไว้ก่อน")
+                    upload_result = cloudinary.uploader.upload(image_file)
+                    image_filename = upload_result["secure_url"]
+                except Exception:
+                    flash("อัปโหลดรูปภาพใหม่ไม่สำเร็จ ระบบใช้รูปเดิมไว้ก่อน")
             else:
                 flash("ไฟล์รูปภาพต้องเป็นนามสกุล png, jpg, jpeg หรือ gif เท่านั้น (ใช้รูปเดิมไว้ก่อน)")
 

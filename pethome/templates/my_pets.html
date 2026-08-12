@@ -23,7 +23,7 @@
     <tr>
       <td style="width:100px">
         {% if pet.image %}
-          <img src="{{ url_for('static', filename='uploads/' ~ pet.image) }}" class="pet-image-small">
+          <img src="{{ pet.image }}" class="pet-image-small">
         {% else %}
           <span class="text-muted">ไม่มีรูป</span>
         {% endif %}

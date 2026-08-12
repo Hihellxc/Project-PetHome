@@ -5,7 +5,7 @@
 <div class="row g-4">
   <div class="col-md-6">
     {% if pet.image %}
-      <img src="{{ url_for('static', filename='uploads/' ~ pet.image) }}" class="img-fluid rounded" style="border-radius: 20px; box-shadow: var(--shadow-card); width:100%; object-fit:cover; max-height:420px;">
+      <img src="{{ pet.image }}" class="img-fluid rounded" style="border-radius: 20px; box-shadow: var(--shadow-card); width:100%; object-fit:cover; max-height:420px;">
     {% else %}
       <img src="https://via.placeholder.com/500x350/eaf5ff/3d8bfd?text=PetHome" class="img-fluid" style="border-radius: 20px; width:100%;">
     {% endif %}

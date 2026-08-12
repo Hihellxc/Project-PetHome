@@ -100,8 +100,7 @@
     <div class="pet-card card">
       <div class="pet-image-wrap">
         {% if pet.image %}
-          <img src="{{ url_for('static', filename='uploads/' ~ pet.image) }}"
-               class="pet-image" alt="{{ pet.name }}">
+          <img src="{{ pet.image }}" class="pet-image" alt="{{ pet.name }}">
         {% else %}
           <img src="https://via.placeholder.com/300x200/eaf5ff/45a6f5?text=PetHome"
                class="pet-image" alt="no image">
