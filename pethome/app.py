@@ -303,16 +303,26 @@ def add_pet():
         if image_file and image_file.filename:
             if allowed_file(image_file.filename):
                 try:
+                    # 1. อัปโหลดไป Cloudinary
                     upload_result = cloudinary.uploader.upload(image_file)
                     image_url = upload_result["secure_url"]
 
+                    # 2. บันทึกไฟล์ไว้ในเครื่อง
                     image_file.seek(0)
                     local_filename = secure_filename(image_file.filename)
-                    image_file.save(os.path.join(app.config["UPLOAD_FOLDER"], local_filename))
+                    image_file.save(
+                        os.path.join(app.config["UPLOAD_FOLDER"], local_filename)
+                    
+                    )
+                    
+                    # เก็บ URL ของ Cloudinary ลง MySQL
+                    image_filename = image_url
 
-                except Exception:
+
+                except Exception as e:
+                    print("Image upload error:", repr(e))
                     image_filename = ""
-                    flash("อัปโหลดรูปภาพไม่สำเร็จ แต่ข้อมูลอื่นถูกบันทึกแล้ว กรุณาแก้ไขประกาศเพื่อเพิ่มรูปใหม่")
+                    flash("อัปโหลดรูปภาพไม่สำเร็จ แต่ข้อมูลอื่นถูกบันทึกแล้ว")
             else:
                 flash("ไฟล์รูปภาพต้องเป็นนามสกุล png, jpg, jpeg หรือ gif เท่านั้น (บันทึกประกาศโดยไม่มีรูป)")
 
