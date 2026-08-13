@@ -516,24 +516,6 @@ def adoption_requests():
     conn = get_db()
     cursor = conn.cursor(dictionary=True)
     cursor.execute(
-        """SELECT Adoption.*, Pet.name AS pet_name, Pet.pet_id AS pet_id
-           FROM Adoption JOIN Pet ON Adoption.pet_id = Pet.pet_id
-           WHERE Pet.owner_id = %s
-           ORDER BY Adoption.created_at DESC""",
-        (session["user_id"],),
-    )
-    requests_list = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    return render_template("adoption_requests.html", requests=requests_list)
-
-
-@app.route("/adoption_requests")
-@login_required
-def adoption_requests():
-    conn = get_db()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute(
         """SELECT Adoption.*, Pet.name AS pet_name, Pet.pet_id AS pet_id,
                   Pet.status AS pet_status
            FROM Adoption JOIN Pet ON Adoption.pet_id = Pet.pet_id
