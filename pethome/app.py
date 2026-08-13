@@ -528,14 +528,32 @@ def adoption_requests():
     return render_template("adoption_requests.html", requests=requests_list)
 
 
+@app.route("/adoption_requests")
+@login_required
+def adoption_requests():
+    conn = get_db()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute(
+        """SELECT Adoption.*, Pet.name AS pet_name, Pet.pet_id AS pet_id,
+                  Pet.status AS pet_status
+           FROM Adoption JOIN Pet ON Adoption.pet_id = Pet.pet_id
+           WHERE Pet.owner_id = %s
+           ORDER BY Adoption.created_at DESC""",
+        (session["user_id"],),
+    )
+    requests_list = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return render_template("adoption_requests.html", requests=requests_list)
+
+
 @app.route("/request/<int:request_id>/approve")
 @login_required
 def approve_request(request_id):
     conn = get_db()
     cursor = conn.cursor(dictionary=True)
-    # หา request และเช็คว่าสัตว์นี้เป็นของ user ที่ login อยู่จริง
     cursor.execute(
-        """SELECT Adoption.*, Pet.owner_id AS owner_id
+        """SELECT Adoption.*, Pet.owner_id AS owner_id, Pet.status AS pet_status
            FROM Adoption JOIN Pet ON Adoption.pet_id = Pet.pet_id
            WHERE Adoption.request_id = %s""",
         (request_id,),
@@ -543,10 +561,20 @@ def approve_request(request_id):
     req = cursor.fetchone()
 
     if req and req["owner_id"] == session["user_id"]:
-        cursor.execute("UPDATE Adoption SET status='Approved' WHERE request_id=%s", (request_id,))
-        cursor.execute("UPDATE Pet SET status='Adopted' WHERE pet_id=%s", (req["pet_id"],))
-        conn.commit()
-        flash("อนุมัติคำขอสำเร็จ")
+        if req["pet_status"] == "Adopted":
+            flash("สัตว์ตัวนี้มีผู้ได้รับอนุมัติไปแล้ว ไม่สามารถอนุมัติคำขออื่นซ้ำได้")
+        else:
+            cursor.execute("UPDATE Adoption SET status='Approved' WHERE request_id=%s", (request_id,))
+            cursor.execute("UPDATE Pet SET status='Adopted' WHERE pet_id=%s", (req["pet_id"],))
+            cursor.execute(
+                """UPDATE Adoption SET status='Rejected'
+                   WHERE pet_id=%s AND status='Pending' AND request_id != %s""",
+                (req["pet_id"], request_id),
+            )
+            conn.commit()
+            flash("อนุมัติคำขอสำเร็จ และปฏิเสธคำขออื่นที่ค้างอยู่ให้อัตโนมัติแล้ว")
+    else:
+        flash("ไม่พบคำขอ หรือคุณไม่มีสิทธิ์ดำเนินการ")
 
     cursor.close()
     conn.close()
@@ -570,6 +598,8 @@ def reject_request(request_id):
         cursor.execute("UPDATE Adoption SET status='Rejected' WHERE request_id=%s", (request_id,))
         conn.commit()
         flash("ปฏิเสธคำขอสำเร็จ")
+    else:
+        flash("ไม่พบคำขอ หรือคุณไม่มีสิทธิ์ดำเนินการ")
 
     cursor.close()
     conn.close()

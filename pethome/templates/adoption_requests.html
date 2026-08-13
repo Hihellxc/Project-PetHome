@@ -9,7 +9,7 @@
   <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
     <div>
       <h5 class="mb-1">{{ req.user_name }} <span class="text-muted" style="font-size:0.9rem;">ขอรับเลี้ยง {{ req.pet_name }}</span></h5>
-      {% if req.status == 'Pending' %}
+      {% if req.status == 'Pending' and req.pet_status != 'Adopted' %}
         <span class="badge badge-pending">รอดำเนินการ</span>
       {% elif req.status == 'Approved' %}
         <span class="badge badge-approved">อนุมัติแล้ว</span>
@@ -17,7 +17,7 @@
         <span class="badge badge-rejected">ปฏิเสธแล้ว</span>
       {% endif %}
     </div>
-    {% if req.status == 'Pending' %}
+    {% if req.status == 'Pending' and req.pet_status != 'Adopted' %}
     <div>
       <a href="{{ url_for('approve_request', request_id=req.request_id) }}"
          class="btn btn-sm btn-success">อนุมัติ</a>
