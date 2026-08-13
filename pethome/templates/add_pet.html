@@ -42,7 +42,7 @@
       <label class="form-label">จังหวัด</label>
       <input type="text" name="province" class="form-control" list="provinceList"
              placeholder="พิมพ์เพื่อค้นหาจังหวัด" autocomplete="off" required>
-      <datalist id="provinceList">
+      <datalist id="provinceList"> <!--ช่อง input นี้จะใช้รายการตัวเลือกจาก provinceList-->
         {% for p in provinces %}
           <option value="{{ p }}">
         {% endfor %}
