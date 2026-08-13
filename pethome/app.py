@@ -11,6 +11,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from werkzeug.security import generate_password_hash, check_password_hash #แอดมินไม่เห็นรหัสของผู้ใช้
+from werkzeug.utils import secure_filename
 
 
 load_dotenv() # โหลด environment variables จากไฟล์ .env (สำหรับรันในเครื่องตัวเอง)
@@ -22,7 +23,37 @@ cloudinary.config( #ในการอัปโหลดรูปภาพไป
 )
 # ---------- ตั้งค่าเบื้องต้น ----------
 app = Flask(__name__)
+# อ่าน secret key จาก environment variable ก่อน ถ้าไม่มีค่อยใช้ค่า default (สำหรับรันในเครื่องตัวเอง)
+app.secret_key = os.environ.get("SECRET_KEY", "pethome-secret-key")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
+# หมายเหตุสำคัญ:
+# แพลตฟอร์ม cloud อย่าง Aiven จะสร้างฐานข้อมูล MySQL ให้ แล้วให้ค่าการเชื่อมต่อมา
+# เราตั้งให้อ่านค่าจาก environment variable ก่อนเสมอ ถ้าไม่มี (เช่นตอนรันในเครื่องตัวเอง)
+# ค่อย fallback ไปใช้ค่าเดิมที่ตั้งไว้สำหรับ localhost
+DB_CONFIG = {
+    "host": os.environ.get("MYSQLHOST", "localhost"),
+    "port": int(os.environ.get("MYSQLPORT", 3306)),
+    "user": os.environ.get("MYSQLUSER", "root"),
+    "password": os.environ.get("MYSQLPASSWORD", "123456"),
+    "database": os.environ.get("MYSQLDATABASE", "pethome"),
+}
+
+# Aiven (และผู้ให้บริการ MySQL บนคลาวด์ส่วนใหญ่) บังคับให้เชื่อมต่อผ่าน SSL เท่านั้น
+# หมายเหตุ: เดิมเคยตั้งให้ตรวจสอบใบรับรอง (ssl_verify_cert=True) ด้วยไฟล์ ca.pem
+# แต่พบว่าทำให้เกิด error "SSL routines::certificate verify failed" ทั้งตอนรันในเครื่อง
+# และตอน deploy บน Render (สาเหตุมักมาจากใบรับรองไม่ตรงเวอร์ชัน/หมุนใหม่/ปัญหาการตรวจสอบ
+# บนระบบปฏิบัติการที่ต่างกัน) จึงเปลี่ยนมาใช้ "เชื่อมต่อแบบเข้ารหัส แต่ไม่ตรวจสอบใบรับรอง"
+# แทน ข้อมูลยังถูกเข้ารหัสระหว่างทางเหมือนเดิม (ปลอดภัยเพียงพอสำหรับโปรเจกต์นี้)
+# แค่ไม่ต้องพึ่งไฟล์ ca.pem อีกต่อไป
+DB_CONFIG["ssl_disabled"] = False
+DB_CONFIG["ssl_verify_cert"] = False
+DB_CONFIG["ssl_verify_identity"] = False
+
+UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads")
+ALLOWED_EXT = {"png", "jpg", "jpeg", "gif"} #อนุญาตให้อัปโหลดเฉพาะไฟล์รูป
+
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 # หมายเหตุสำคัญ:
 # แพลตฟอร์ม cloud อย่าง Aiven จะสร้างฐานข้อมูล MySQL ให้ แล้วให้ค่าการเชื่อมต่อมา
 # เราตั้งให้อ่านค่าจาก environment variable ก่อนเสมอ ถ้าไม่มี (เช่นตอนรันในเครื่องตัวเอง)
