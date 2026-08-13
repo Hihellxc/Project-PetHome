@@ -11,7 +11,6 @@ from datetime import datetime
 from dotenv import load_dotenv
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from werkzeug.security import generate_password_hash, check_password_hash #แอดมินไม่เห็นรหัสของผู้ใช้
-from werkzeug.utils import secure_filename
 
 
 load_dotenv() # โหลด environment variables จากไฟล์ .env (สำหรับรันในเครื่องตัวเอง)
@@ -23,9 +22,6 @@ cloudinary.config( #ในการอัปโหลดรูปภาพไป
 )
 # ---------- ตั้งค่าเบื้องต้น ----------
 app = Flask(__name__)
-# อ่าน secret key จาก environment variable ก่อน ถ้าไม่มีค่อยใช้ค่า default (สำหรับรันในเครื่องตัวเอง)
-app.secret_key = os.environ.get("SECRET_KEY", "pethome-secret-key")
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # หมายเหตุสำคัญ:
 # แพลตฟอร์ม cloud อย่าง Aiven จะสร้างฐานข้อมูล MySQL ให้ แล้วให้ค่าการเชื่อมต่อมา
@@ -50,10 +46,8 @@ DB_CONFIG["ssl_disabled"] = False
 DB_CONFIG["ssl_verify_cert"] = False
 DB_CONFIG["ssl_verify_identity"] = False
 
-UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads")
 ALLOWED_EXT = {"png", "jpg", "jpeg", "gif"} #อนุญาตให้อัปโหลดเฉพาะไฟล์รูป
 
-app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
 # รายชื่อ 77 จังหวัดของไทย ใช้แสดงเป็นตัวเลือกในช่องกรอกจังหวัด (พิมพ์ค้นหาได้ผ่าน <datalist>)
 THAI_PROVINCES = [
@@ -74,11 +68,6 @@ THAI_PROVINCES = [
     "อยุธยา", "อ่างทอง", "อำนาจเจริญ", "อุดรธานี", "อุตรดิตถ์",
     "อุทัยธานี", "อุบลราชธานี",
 ]
-
-# สร้างโฟลเดอร์เก็บรูปภาพไว้ล่วงหน้าเสมอ (เผื่อโฟลเดอร์ถูกลบ หรือรันครั้งแรกในเครื่องใหม่)
-# ถ้าไม่มีบรรทัดนี้ และโฟลเดอร์นี้ไม่มีอยู่จริง การอัปโหลดรูปจะทำให้ทั้งคำขอ error
-# และส่งผลให้ข้อมูลสัตว์เลี้ยงไม่ถูกบันทึกลงฐานข้อมูลเลย (แม้กรอกข้อมูลถูกต้องก็ตาม)
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 
 # ---------- ฟังก์ชันช่วยเหลือ (Helper) ----------
