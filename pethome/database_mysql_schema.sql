@@ -35,7 +35,7 @@ CREATE TABLE Adoption (
     message TEXT,
     status VARCHAR(20) DEFAULT 'Pending',
     created_at DATETIME,
-    FOREIGN KEY (pet_id) REFERENCES Pet(pet_id),
+    FOREIGN KEY (pet_id) REFERENCES Pet(pet_id)
 );
 
 
