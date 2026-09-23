@@ -165,6 +165,12 @@ MAIL_CONFIG = {
     "sender_name": os.environ.get("MAIL_SENDER_NAME", "PetHome"),
 }
 
+# ---- DEBUG: ลบทิ้งได้หลังแก้ปัญหาเสร็จ ----
+print("=" * 50)
+print("MAIL_USERNAME ที่แอปอ่านได้จริง:", repr(MAIL_CONFIG["username"]))
+print("MAIL_PASSWORD ยาว:", len(MAIL_CONFIG["password"]), "ตัวอักษร")
+print("=" * 50)
+
 cloudinary.config(
     cloud_name=os.environ.get("CLOUDINARY_CLOUD_NAME"),
     api_key=os.environ.get("CLOUDINARY_API_KEY"),
