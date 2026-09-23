@@ -202,6 +202,7 @@ def send_email(to_address, subject, body):
             server.starttls()
             server.login(MAIL_CONFIG["username"], MAIL_CONFIG["password"])
             server.send_message(msg)
+        print(f"✅ ส่งอีเมลไปที่ {to_address} สำเร็จ")   # เพิ่มบรรทัดนี้
         return True
     except Exception as e:
         print(f"ส่งอีเมลไปที่ {to_address} ไม่สำเร็จ: {e}")
