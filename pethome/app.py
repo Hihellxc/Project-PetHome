@@ -3,6 +3,8 @@ PetHome - ระบบรับเลี้ยงสัตว์
 Backend: Flask + MySQL
 """
 
+from dotenv import load_dotenv
+load_dotenv()
 import os
 import smtplib
 import secrets
@@ -327,7 +329,7 @@ def forgot_password():
                 f"มีการขอรีเซ็ตรหัสผ่านสำหรับบัญชี PetHome ของคุณ\n"
                 f"กดลิงก์นี้เพื่อตั้งรหัสผ่านใหม่ (ลิงก์จะหมดอายุใน 1 ชั่วโมง):\n\n"
                 f"{reset_link}\n\n"
-                f"ถ้าคุณไม่ได้ขอรีเซ็ตรหัสผ่าน สามารถละเลยอีเมลนี้ได้เลยครับ\n\n"
+                f"ถ้าคุณไม่ได้ขอรีเซ็ตรหัสผ่าน สามารถละเลยอีเมลนี้ได้เลยค่ะ\n\n"
                 f"— PetHome"
             )
             send_email(user["email"], "ขอรีเซ็ตรหัสผ่าน PetHome", body)
