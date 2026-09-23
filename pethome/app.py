@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 import os
 import json
+from functools import wraps
 from html import escape
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
@@ -24,6 +25,18 @@ app = Flask(__name__)
 # อ่าน secret key จาก environment variable ก่อน ถ้าไม่มีค่อยใช้ค่า default (สำหรับรันในเครื่องตัวเอง)
 app.secret_key = os.environ.get("SECRET_KEY", "pethome-secret-key")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+def login_required(view_func):
+    """บังคับให้ผู้ใช้เข้าสู่ระบบก่อนเข้าหน้านี้"""
+    @wraps(view_func)
+    def wrapped_view(*args, **kwargs):
+        if "user_id" not in session:
+            flash("กรุณาเข้าสู่ระบบก่อน")
+            return redirect(url_for("login"))
+        return view_func(*args, **kwargs)
+
+    return wrapped_view
 
 # หมายเหตุสำคัญ:
 # แพลตฟอร์ม cloud อย่าง Aiven จะสร้างฐานข้อมูล MySQL ให้ แล้วให้ค่าการเชื่อมต่อมา
