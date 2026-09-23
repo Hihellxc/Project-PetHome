@@ -809,20 +809,48 @@ def approve_request(request_id):
     req = cursor.fetchone()
 
     if req and req["owner_id"] == session["user_id"]:
-        cursor.execute("UPDATE Adoption SET status='Approved' WHERE request_id=%s", (request_id,))
-        cursor.execute("UPDATE Pet SET status='Adopted' WHERE pet_id=%s", (req["pet_id"],))
-        conn.commit()
-        flash("อนุมัติคำขอสำเร็จ")
 
-        # ส่งอีเมลแจ้งผู้ขอรับเลี้ยงว่าได้รับการอนุมัติแล้ว (ถ้าเขากรอกอีเมลไว้)
+        # อนุมัติคนที่เจ้าของเลือก
+        cursor.execute(
+            "UPDATE Adoption SET status='Approved' WHERE request_id=%s",
+            (request_id,)
+        )
+
+        # เปลี่ยนสถานะสัตว์เป็น Adopted
+        cursor.execute(
+            "UPDATE Pet SET status='Adopted' WHERE pet_id=%s",
+            (req["pet_id"],)
+        )
+
+        # ปฏิเสธคำขออื่น ๆ ที่ยังรอดำเนินการ
+        # สำหรับสัตว์ตัวเดียวกัน
+        cursor.execute(
+            """UPDATE Adoption
+            SET status='Rejected'
+            WHERE pet_id=%s
+                AND request_id != %s
+                AND status='Pending'""",
+            (req["pet_id"], request_id)
+        )
+
+        conn.commit()
+        flash("อนุมัติคำขอสำเร็จ และปฏิเสธคำขออื่นสำหรับสัตว์ตัวนี้แล้ว")
+
+        # ส่งอีเมลแจ้งคนที่ได้รับอนุมัติ
         if req.get("email"):
             body = (
                 f"สวัสดีคุณ {req['user_name']},\n\n"
                 f"ข่าวดี! เจ้าของ \"{req['pet_name']}\" อนุมัติคำขอรับเลี้ยงของคุณแล้วครับ 🎉\n"
-                f"กรุณาติดต่อกลับผ่านช่องทางที่คุณให้ไว้ตอนส่งคำขอ เพื่อนัดวันรับตัวได้เลย\n\n"
+                f"กรุณาติดต่อกลับผ่านช่องทางที่คุณให้ไว้ตอนส่งคำขอ "
+                f"เพื่อนัดวันรับตัวได้เลย\n\n"
                 f"— PetHome"
             )
-            send_email(req["email"], f"คำขอรับเลี้ยง {req['pet_name']} ของคุณได้รับการอนุมัติ 🎉", body)
+
+            send_email(
+                req["email"],
+                f"คำขอรับเลี้ยง {req['pet_name']} ของคุณได้รับการอนุมัติ 🎉",
+                body
+            )
 
     cursor.close()
     conn.close()
