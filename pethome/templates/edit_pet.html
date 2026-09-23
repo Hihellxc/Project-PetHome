@@ -16,7 +16,7 @@
       <label class="form-label">รูปสัตว์ (เลือกใหม่ถ้าต้องการเปลี่ยน)</label>
       <input type="file" name="image" class="form-control" accept="image/*">
       {% if pet.image %}
-        <img src="{{ url_for('static', filename='uploads/' ~ pet.image) }}" class="mt-2 pet-image-small">
+         <img src="{{ pet.image }}" class="mt-2 pet-image-small">
       {% endif %}
     </div>
 

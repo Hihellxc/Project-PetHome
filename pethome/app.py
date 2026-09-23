@@ -14,6 +14,8 @@ from datetime import datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from werkzeug.security import generate_password_hash, check_password_hash #แอดมินไม่เห็นรหัสของผู้ใช้
 from werkzeug.utils import secure_filename
+import cloudinary
+import cloudinary.uploader #เพื่ออัปโหลดรูปไปเก็บบน Cloudinary แทนเก็บไว้ในเครื่องตัวเอง
 
 # ---------- ตั้งค่าเบื้องต้น ----------
 app = Flask(__name__)
@@ -163,6 +165,12 @@ MAIL_CONFIG = {
     "sender_name": os.environ.get("MAIL_SENDER_NAME", "PetHome"),
 }
 
+cloudinary.config(
+    cloud_name=os.environ.get("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.environ.get("CLOUDINARY_API_KEY"),
+    api_secret=os.environ.get("CLOUDINARY_API_SECRET"),
+    secure=True,
+)
 
 def send_email(to_address, subject, body):
     """
