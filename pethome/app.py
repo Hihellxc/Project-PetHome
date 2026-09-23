@@ -6,9 +6,11 @@ Backend: Flask + MySQL
 from dotenv import load_dotenv
 load_dotenv()
 import os
-import smtplib
 import secrets
-from email.message import EmailMessage
+import json
+from urllib.request import Request, urlopen
+from urllib.error import HTTPError, URLError
+from html import escape
 import mysql.connector
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for, session, flash
@@ -153,23 +155,20 @@ def allowed_file(filename):
 
 
 # ---------- ตั้งค่าและฟังก์ชันสำหรับส่งอีเมลแจ้งเตือน ----------
-# ใช้ SMTP ผ่าน Gmail เป็นตัวอย่าง (ฟรี) — ต้องตั้งค่า environment variable เหล่านี้:
-# MAIL_USERNAME = อีเมล Gmail ที่จะใช้ส่ง (เช่น pethome.noreply@gmail.com)
-# MAIL_PASSWORD = "App Password" ของ Gmail (ไม่ใช่รหัสผ่านล็อกอินปกติ ต้องสร้างแยกต่างหาก)
-# ถ้าไม่ตั้งค่าไว้ ระบบจะข้ามการส่งอีเมลไปเงียบๆ (เว็บยังทำงานปกติ ไม่ error)
-MAIL_CONFIG = {
-    "server": os.environ.get("MAIL_SERVER", "smtp.gmail.com"),
-    "port": int(os.environ.get("MAIL_PORT", 587)),
-    "username": os.environ.get("MAIL_USERNAME", ""),
-    "password": os.environ.get("MAIL_PASSWORD", ""),
-    "sender_name": os.environ.get("MAIL_SENDER_NAME", "PetHome"),
-}
-
-# ---- DEBUG: ลบทิ้งได้หลังแก้ปัญหาเสร็จ ----
-print("=" * 50)
-print("MAIL_USERNAME ที่แอปอ่านได้จริง:", repr(MAIL_CONFIG["username"]))
-print("MAIL_PASSWORD ยาว:", len(MAIL_CONFIG["password"]), "ตัวอักษร")
-print("=" * 50)
+# ใช้ Resend Email API ผ่าน HTTPS แทน Gmail SMTP
+# Render สามารถเรียก HTTPS API ได้ จึงไม่ต้องใช้ SMTP port 587
+#
+# ตั้งค่า Environment Variables บน Render:
+# RESEND_API_KEY = API Key จาก Resend เช่น re_xxxxxxxxx
+# RESEND_FROM_EMAIL = onboarding@resend.dev สำหรับการทดสอบ
+# หากภายหลังมี domain ของตัวเองที่ verify กับ Resend แล้ว
+# สามารถเปลี่ยนเป็นอีเมลภายใต้ domain นั้นได้
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
+RESEND_FROM_EMAIL = os.environ.get(
+    "RESEND_FROM_EMAIL",
+    "onboarding@resend.dev"
+)
+RESEND_API_URL = "https://api.resend.com/emails"
 
 cloudinary.config(
     cloud_name=os.environ.get("CLOUDINARY_CLOUD_NAME"),
@@ -180,33 +179,61 @@ cloudinary.config(
 
 def send_email(to_address, subject, body):
     """
-    ส่งอีเมลแจ้งเตือน 1 ฉบับ
-    ถ้าส่งไม่สำเร็จ (SMTP ล่ม, ตั้งค่าไม่ครบ, ไม่มีอีเมลปลายทาง ฯลฯ)
-    จะ "ไม่ทำให้ทั้งคำขอ error" แค่ print แจ้งไว้ใน log แล้วปล่อยผ่าน
-    เพราะการส่งอีเมลไม่สำเร็จไม่ควรทำให้ลงประกาศ/ส่งคำขอ/อนุมัติ ล้มเหลวไปด้วย
+    ส่งอีเมล 1 ฉบับผ่าน Resend Email API
+    ถ้าส่งไม่สำเร็จ จะไม่ทำให้คำขอหลักของเว็บ error
+    แต่จะ print รายละเอียดไว้ใน Render Logs เพื่อใช้ตรวจสอบ
     """
     if not to_address:
         return False
-    if not MAIL_CONFIG["username"] or not MAIL_CONFIG["password"]:
-        print("ยังไม่ได้ตั้งค่า MAIL_USERNAME/MAIL_PASSWORD จึงข้ามการส่งอีเมล")
+
+    if not RESEND_API_KEY:
+        print("ยังไม่ได้ตั้งค่า RESEND_API_KEY จึงข้ามการส่งอีเมล")
         return False
 
     try:
-        msg = EmailMessage()
-        msg["Subject"] = subject
-        msg["From"] = f'{MAIL_CONFIG["sender_name"]} <{MAIL_CONFIG["username"]}>'
-        msg["To"] = to_address
-        msg.set_content(body)
+        # Resend API รับ HTML จึงแปลงข้อความธรรมดาเป็น HTML แบบง่ายๆ
+        html_body = escape(body).replace("\n", "<br>")
 
-        with smtplib.SMTP(MAIL_CONFIG["server"], MAIL_CONFIG["port"], timeout=10) as server:
-            server.starttls()
-            server.login(MAIL_CONFIG["username"], MAIL_CONFIG["password"])
-            server.send_message(msg)
-        print(f"✅ ส่งอีเมลไปที่ {to_address} สำเร็จ")   # เพิ่มบรรทัดนี้
-        return True
+        payload = {
+            "from": RESEND_FROM_EMAIL,
+            "to": [to_address],
+            "subject": subject,
+            "html": html_body
+        }
+
+        data = json.dumps(payload).encode("utf-8")
+
+        req = Request(
+            RESEND_API_URL,
+            data=data,
+            headers={
+                "Authorization": f"Bearer {RESEND_API_KEY}",
+                "Content-Type": "application/json",
+                "User-Agent": "PetHome/1.0"
+            },
+            method="POST"
+        )
+
+        with urlopen(req, timeout=15) as response:
+            response_body = response.read().decode("utf-8")
+            print(f"ส่งอีเมลไปที่ {to_address} สำเร็จ")
+            print(f"Resend response: {response_body}")
+            return True
+
+    except HTTPError as e:
+        error_body = e.read().decode("utf-8", errors="replace")
+        print(f"Resend ส่งอีเมลไปที่ {to_address} ไม่สำเร็จ: HTTP {e.code}")
+        print(f"Resend error: {error_body}")
+        return False
+
+    except URLError as e:
+        print(f"เชื่อมต่อ Resend ไม่สำเร็จสำหรับ {to_address}: {e}")
+        return False
+
     except Exception as e:
         print(f"ส่งอีเมลไปที่ {to_address} ไม่สำเร็จ: {e}")
         return False
+
 
 
 def login_required(view_func):
