@@ -6,11 +6,9 @@ Backend: Flask + MySQL
 from dotenv import load_dotenv
 load_dotenv()
 import os
+import smtplib
 import secrets
-import json
-from urllib.request import Request, urlopen
-from urllib.error import HTTPError, URLError
-from html import escape
+from email.message import EmailMessage
 import mysql.connector
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for, session, flash
@@ -155,20 +153,23 @@ def allowed_file(filename):
 
 
 # ---------- ตั้งค่าและฟังก์ชันสำหรับส่งอีเมลแจ้งเตือน ----------
-# ใช้ Resend Email API ผ่าน HTTPS แทน Gmail SMTP
-# Render สามารถเรียก HTTPS API ได้ จึงไม่ต้องใช้ SMTP port 587
-#
-# ตั้งค่า Environment Variables บน Render:
-# RESEND_API_KEY = API Key จาก Resend เช่น re_xxxxxxxxx
-# RESEND_FROM_EMAIL = onboarding@resend.dev สำหรับการทดสอบ
-# หากภายหลังมี domain ของตัวเองที่ verify กับ Resend แล้ว
-# สามารถเปลี่ยนเป็นอีเมลภายใต้ domain นั้นได้
-RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
-RESEND_FROM_EMAIL = os.environ.get(
-    "RESEND_FROM_EMAIL",
-    "onboarding@resend.dev"
-)
-RESEND_API_URL = "https://api.resend.com/emails"
+# ใช้ SMTP ผ่าน Gmail เป็นตัวอย่าง (ฟรี) — ต้องตั้งค่า environment variable เหล่านี้:
+# MAIL_USERNAME = อีเมล Gmail ที่จะใช้ส่ง (เช่น pethome.noreply@gmail.com)
+# MAIL_PASSWORD = "App Password" ของ Gmail (ไม่ใช่รหัสผ่านล็อกอินปกติ ต้องสร้างแยกต่างหาก)
+# ถ้าไม่ตั้งค่าไว้ ระบบจะข้ามการส่งอีเมลไปเงียบๆ (เว็บยังทำงานปกติ ไม่ error)
+MAIL_CONFIG = {
+    "server": os.environ.get("MAIL_SERVER", "smtp.gmail.com"),
+    "port": int(os.environ.get("MAIL_PORT", 587)),
+    "username": os.environ.get("MAIL_USERNAME", ""),
+    "password": os.environ.get("MAIL_PASSWORD", ""),
+    "sender_name": os.environ.get("MAIL_SENDER_NAME", "PetHome"),
+}
+
+# ---- DEBUG: ลบทิ้งได้หลังแก้ปัญหาเสร็จ ----
+print("=" * 50)
+print("MAIL_USERNAME ที่แอปอ่านได้จริง:", repr(MAIL_CONFIG["username"]))
+print("MAIL_PASSWORD ยาว:", len(MAIL_CONFIG["password"]), "ตัวอักษร")
+print("=" * 50)
 
 cloudinary.config(
     cloud_name=os.environ.get("CLOUDINARY_CLOUD_NAME"),
@@ -179,19 +180,25 @@ cloudinary.config(
 
 def send_email(to_address, subject, body):
     """
-    ส่งอีเมล 1 ฉบับผ่าน Resend Email API
-    ถ้าส่งไม่สำเร็จ จะไม่ทำให้คำขอหลักของเว็บ error
-    แต่จะ print รายละเอียดไว้ใน Render Logs เพื่อใช้ตรวจสอบ
+    ส่งอีเมลผ่าน Resend Email API
+    - แสดง log ทุกขั้นตอนเพื่อ debug บน Render
+    - ไม่พิมพ์ API Key ออกมา
+    - ถ้าส่งไม่สำเร็จ จะไม่ทำให้ route หลักของเว็บล้ม
     """
+    print(
+        f"[Resend] send_email() called | to={to_address!r} | subject={subject!r}",
+        flush=True
+    )
+
     if not to_address:
+        print("[Resend] STOP: ไม่มีอีเมลผู้รับ", flush=True)
         return False
 
     if not RESEND_API_KEY:
-        print("ยังไม่ได้ตั้งค่า RESEND_API_KEY จึงข้ามการส่งอีเมล")
+        print("[Resend] STOP: ไม่พบ RESEND_API_KEY ใน Environment Variables", flush=True)
         return False
 
     try:
-        # Resend API รับ HTML จึงแปลงข้อความธรรมดาเป็น HTML แบบง่ายๆ
         html_body = escape(body).replace("\n", "<br>")
 
         payload = {
@@ -202,6 +209,11 @@ def send_email(to_address, subject, body):
         }
 
         data = json.dumps(payload).encode("utf-8")
+
+        print(
+            f"[Resend] POST {RESEND_API_URL} | from={RESEND_FROM_EMAIL!r}",
+            flush=True
+        )
 
         req = Request(
             RESEND_API_URL,
@@ -216,22 +228,33 @@ def send_email(to_address, subject, body):
 
         with urlopen(req, timeout=15) as response:
             response_body = response.read().decode("utf-8")
-            print(f"ส่งอีเมลไปที่ {to_address} สำเร็จ")
-            print(f"Resend response: {response_body}")
+
+            print(
+                f"[Resend] SUCCESS | HTTP {response.status} | response={response_body}",
+                flush=True
+            )
             return True
 
     except HTTPError as e:
         error_body = e.read().decode("utf-8", errors="replace")
-        print(f"Resend ส่งอีเมลไปที่ {to_address} ไม่สำเร็จ: HTTP {e.code}")
-        print(f"Resend error: {error_body}")
+        print(
+            f"[Resend] HTTP ERROR | status={e.code} | body={error_body}",
+            flush=True
+        )
         return False
 
     except URLError as e:
-        print(f"เชื่อมต่อ Resend ไม่สำเร็จสำหรับ {to_address}: {e}")
+        print(
+            f"[Resend] URL ERROR | reason={e.reason}",
+            flush=True
+        )
         return False
 
     except Exception as e:
-        print(f"ส่งอีเมลไปที่ {to_address} ไม่สำเร็จ: {e}")
+        print(
+            f"[Resend] UNEXPECTED ERROR | type={type(e).__name__} | error={e}",
+            flush=True
+        )
         return False
 
 
@@ -352,8 +375,15 @@ def forgot_password():
 
         conn = get_db()
         cursor = conn.cursor(dictionary=True)
+        print(f"[Forgot Password] request received | email={email!r}", flush=True)
+
         cursor.execute("SELECT * FROM User WHERE email = %s", (email,))
         user = cursor.fetchone()
+
+        print(
+            f"[Forgot Password] user found: {'YES' if user else 'NO'}",
+            flush=True
+        )
 
         if user:
             # สร้าง token แบบสุ่มที่คาดเดาไม่ได้ และตั้งอายุ 1 ชั่วโมง
@@ -374,7 +404,19 @@ def forgot_password():
                 f"ถ้าคุณไม่ได้ขอรีเซ็ตรหัสผ่าน สามารถละเลยอีเมลนี้ได้เลยค่ะ\n\n"
                 f"— PetHome"
             )
-            send_email(user["email"], "ขอรีเซ็ตรหัสผ่าน PetHome", body)
+            print(
+                f"[Forgot Password] calling send_email() for {user['email']!r}",
+                flush=True
+            )
+            send_result = send_email(
+                user["email"],
+                "ขอรีเซ็ตรหัสผ่าน PetHome",
+                body
+            )
+            print(
+                f"[Forgot Password] send_email result: {send_result}",
+                flush=True
+            )
 
         cursor.close()
         conn.close()
@@ -431,6 +473,51 @@ def reset_password(token):
     cursor.close()
     conn.close()
     return render_template("reset_password.html", token=token)
+
+
+# ---------- ทดสอบ Resend ----------
+# ใช้ชั่วคราวสำหรับตรวจสอบว่า Render -> Resend -> อีเมล ทำงานหรือไม่
+# ต้อง login ก่อน และระบบจะส่งไปยังอีเมลของบัญชีที่ login อยู่เท่านั้น
+@app.route("/test_email")
+@login_required
+def test_email():
+    conn = get_db()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute(
+        "SELECT email, name FROM User WHERE user_id = %s",
+        (session["user_id"],)
+    )
+    user = cursor.fetchone()
+    cursor.close()
+    conn.close()
+
+    if not user or not user.get("email"):
+        print("[Resend Test] ไม่พบอีเมลของผู้ใช้ที่ login", flush=True)
+        flash("ไม่พบอีเมลของบัญชีนี้")
+        return redirect(url_for("home"))
+
+    print(
+        f"[Resend Test] Starting test email to {user['email']!r}",
+        flush=True
+    )
+
+    result = send_email(
+        user["email"],
+        "PetHome - ทดสอบระบบส่งอีเมล",
+        f"สวัสดีคุณ {user['name']}\n\n"
+        "นี่คืออีเมลทดสอบจาก PetHome ผ่าน Resend API\n"
+        "ถ้าได้รับอีเมลนี้ แสดงว่าระบบส่งอีเมลทำงานแล้ว\n\n"
+        "— PetHome"
+    )
+
+    print(f"[Resend Test] Result: {result}", flush=True)
+
+    if result:
+        flash("ส่งอีเมลทดสอบแล้ว กรุณาเช็ค Inbox / Spam")
+    else:
+        flash("ส่งอีเมลทดสอบไม่สำเร็จ ให้ดู Render Logs")
+
+    return redirect(url_for("home"))
 
 
 # ---------- ลงประกาศสัตว์ (CRUD) ----------
