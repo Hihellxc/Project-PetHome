@@ -16,7 +16,7 @@
       <label class="form-label">รูปสัตว์ (เลือกใหม่ถ้าต้องการเปลี่ยน)</label>
       <input type="file" name="image" class="form-control" accept="image/*">
       {% if pet.image %}
-        <img src="{{ url_for('static', filename='uploads/' ~ pet.image) }}" class="mt-2 pet-image-small">
+        <img src="{{ pet.image }}" class="mt-2 pet-image-small">
       {% endif %}
     </div>
 
@@ -44,8 +44,8 @@
     <div class="col-md-3">
       <label class="form-label">สถานะ</label>
       <select name="status" class="form-select" required>
-        <option value="Available" {% if pet.status == 'Available' %}selected{% endif %}>Available (ยังหาบ้านอยู่)</option>
-        <option value="Adopted" {% if pet.status == 'Adopted' %}selected{% endif %}>Adopted (มีบ้านแล้ว)</option>
+        <option value="Available" {% if pet.status == 'available' %}selected{% endif %}>Available (ยังหาบ้านอยู่)</option>
+        <option value="Adopted" {% if pet.status == 'adopted' %}selected{% endif %}>Adopted (มีบ้านแล้ว)</option>
       </select>
     </div>
 

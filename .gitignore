@@ -1,1 +1,5 @@
 .env
+__pycache__/
+*.pyc
+frontend/static/uploads/*
+!frontend/static/uploads/.gitkeep
