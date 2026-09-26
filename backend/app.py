@@ -3,15 +3,6 @@ PetHome - ระบบรับเลี้ยงสัตว์
 Backend: Flask + MySQL
 """
 
-<<<<<<< HEAD:backend/app.py
-import os
-import secrets
-import cloudinary
-import cloudinary.uploader
-import mysql.connector
-from datetime import datetime
-=======
->>>>>>> origin/main:pethome/app.py
 from dotenv import load_dotenv
 load_dotenv()
 import os
@@ -80,10 +71,7 @@ ALLOWED_EXT = {"png", "jpg", "jpeg", "gif"} #อนุญาตให้อั�
 
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
-<<<<<<< HEAD:backend/app.py
-=======
 # รายชื่อ 77 จังหวัดของไทย ใช้แสดงเป็นตัวเลือกในช่องกรอกจังหวัด (พิมพ์ค้นหาได้ผ่าน <datalist>)
->>>>>>> origin/main:pethome/app.py
 THAI_PROVINCES = [
     "กรุงเทพมหานคร", "กระบี่", "กาญจนบุรี", "กาฬสินธุ์", "กำแพงเพชร",
     "ขอนแก่น", "จันทบุรี", "ฉะเชิงเทรา", "ชลบุรี", "ชัยนาท",
@@ -116,66 +104,10 @@ def init_db():
     """สร้างตารางจาก schema หลัก ถ้ายังไม่มี"""
     conn = get_db()
     cur = conn.cursor()
-<<<<<<< HEAD:backend/app.py
     with open(os.path.join(PROJECT_ROOT, "database", "schema.sql"), encoding="utf-8") as schema_file:
         statements = [statement.strip() for statement in schema_file.read().split(";") if statement.strip()]
     for statement in statements:
         cur.execute(statement)
-=======
-
-    # ตาราง User
-    # หมายเหตุ: MySQL ใช้ "AUTO_INCREMENT" (มีขีดล่าง) ไม่ใช่ "AUTOINCREMENT" แบบ SQLite
-    # และคอลัมน์ที่จะใช้ UNIQUE ต้องเป็น VARCHAR (กำหนดความยาว) ไม่ใช่ TEXT
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS User (
-            user_id INT AUTO_INCREMENT PRIMARY KEY,
-            name VARCHAR(100) NOT NULL,
-            email VARCHAR(150) UNIQUE NOT NULL,
-            password VARCHAR(255) NOT NULL,
-            reset_token VARCHAR(255),
-            reset_token_expiry DATETIME
-        )
-    """)
-
-    # ตาราง Pet
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS Pet (
-            pet_id INT AUTO_INCREMENT PRIMARY KEY,
-            owner_id INT NOT NULL,
-            name VARCHAR(100) NOT NULL,
-            type VARCHAR(50) NOT NULL,
-            gender VARCHAR(20) NOT NULL,
-            age INT NOT NULL,
-            province VARCHAR(100) NOT NULL,
-            description TEXT,
-            image VARCHAR(255),
-            status VARCHAR(20) DEFAULT 'Available',
-            created_at DATETIME,
-            FOREIGN KEY (owner_id) REFERENCES User(user_id)
-        )
-    """)
-
-    # ตาราง Adoption
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS Adoption (
-            request_id INT AUTO_INCREMENT PRIMARY KEY,
-            pet_id INT NOT NULL,
-            user_name VARCHAR(100) NOT NULL,
-            phone VARCHAR(20) NOT NULL,
-            email VARCHAR(150),
-            province VARCHAR(100),
-            occupation VARCHAR(100),
-            pet_experience VARCHAR(20),
-            housing_type VARCHAR(50),
-            household_info TEXT,
-            message TEXT,
-            status VARCHAR(20) DEFAULT 'Pending',
-            created_at DATETIME,
-            FOREIGN KEY (pet_id) REFERENCES Pet(pet_id)
-        )
-    """)
-
->>>>>>> origin/main:pethome/app.py
     conn.commit()
     cur.close()
     conn.close()
@@ -297,8 +229,6 @@ def home():
     province = request.args.get("province", "")
 
     conn = get_db()
-<<<<<<< HEAD:backend/app.py
-
     # ตรวจสอบว่า Render กำลังใช้ Database ตัวไหน
     debug_cursor = conn.cursor()
     debug_cursor.execute("SELECT DATABASE(), @@hostname")
@@ -315,9 +245,6 @@ def home():
     debug_cursor.close()
 
     cursor = conn.cursor(dictionary=True)
-=======
-    cursor = conn.cursor(dictionary=True) # ใช้ dictionary=True เพื่อให้ผลลัพธ์เป็น dict แทน tuple
->>>>>>> origin/main:pethome/app.py
 
     query = """
         SELECT pets.*, pets.id AS pet_id, pets.species AS type,
@@ -337,14 +264,7 @@ def home():
         query += " AND pets.province LIKE %s"
         params.append(f"%{province}%")
 
-<<<<<<< HEAD:backend/app.py
     query += " ORDER BY pets.created_at DESC"
-
-=======
-    query += " ORDER BY created_at DESC"
-    # หมายเหตุ: cursor.execute() ของ mysql.connector คืนค่า None (ไม่ใช่ cursor)
-    # จึงต่อ .fetchall() ท้าย execute() แบบ sqlite ไม่ได้ ต้องแยกเป็นคนละบรรทัด
->>>>>>> origin/main:pethome/app.py
     cursor.execute(query, params)
     pets = cursor.fetchall()
     cursor.close()
@@ -892,7 +812,6 @@ def adoption_requests():
     conn = get_db()
     cursor = conn.cursor(dictionary=True)
     cursor.execute(
-<<<<<<< HEAD:backend/app.py
          """SELECT adoption_requests.*, adoption_requests.id AS request_id,
                 users.name AS user_name, users.phone_number AS phone,
                 users.email AS email, pets.name AS pet_name,
@@ -902,12 +821,6 @@ def adoption_requests():
             JOIN users ON adoption_requests.applicant_id = users.id
             WHERE pets.user_id = %s
             ORDER BY adoption_requests.created_at DESC""",
-=======
-        """SELECT Adoption.*, Pet.name AS pet_name, Pet.pet_id AS pet_id
-           FROM Adoption JOIN Pet ON Adoption.pet_id = Pet.pet_id
-           WHERE Pet.owner_id = %s
-           ORDER BY Adoption.created_at DESC""",
->>>>>>> origin/main:pethome/app.py
         (session["user_id"],),
     )
     requests_list = cursor.fetchall()
@@ -923,23 +836,16 @@ def approve_request(request_id):
     cursor = conn.cursor(dictionary=True)
     # หา request และเช็คว่าสัตว์นี้เป็นของ user ที่ login อยู่จริง
     cursor.execute(
-<<<<<<< HEAD:backend/app.py
         """SELECT adoption_requests.*, adoption_requests.id AS request_id,
                 pets.user_id AS owner_id, pets.status AS pet_status,
                 pets.id AS pet_id
            FROM adoption_requests JOIN pets ON adoption_requests.pet_id = pets.id
            WHERE adoption_requests.id = %s""",
-=======
-        """SELECT Adoption.*, Pet.owner_id AS owner_id, Pet.name AS pet_name
-           FROM Adoption JOIN Pet ON Adoption.pet_id = Pet.pet_id
-           WHERE Adoption.request_id = %s""",
->>>>>>> origin/main:pethome/app.py
         (request_id,),
     )
     req = cursor.fetchone()
 
     if req and req["owner_id"] == session["user_id"]:
-<<<<<<< HEAD:backend/app.py
         if req["pet_status"] == "adopted":
             flash("สัตว์ตัวนี้มีผู้ได้รับอนุมัติไปแล้ว ไม่สามารถอนุมัติคำขออื่นซ้ำได้")
         else:
@@ -949,49 +855,6 @@ def approve_request(request_id):
                 """UPDATE adoption_requests SET status='rejected'
                    WHERE pet_id=%s AND status='pending' AND id != %s""",
                 (req["pet_id"], request_id),
-=======
-
-        # อนุมัติคนที่เจ้าของเลือก
-        cursor.execute(
-            "UPDATE Adoption SET status='Approved' WHERE request_id=%s",
-            (request_id,)
-        )
-
-        # เปลี่ยนสถานะสัตว์เป็น Adopted
-        cursor.execute(
-            "UPDATE Pet SET status='Adopted' WHERE pet_id=%s",
-            (req["pet_id"],)
-        )
-
-        # ปฏิเสธคำขออื่น ๆ ที่ยังรอดำเนินการ
-        # สำหรับสัตว์ตัวเดียวกัน
-        cursor.execute(
-            """UPDATE Adoption
-            SET status='Rejected'
-            WHERE pet_id=%s
-                AND request_id != %s
-                AND status='Pending'""",
-            (req["pet_id"], request_id)
-        )
-
-        conn.commit()
-        flash("อนุมัติคำขอสำเร็จ และปฏิเสธคำขออื่นสำหรับสัตว์ตัวนี้แล้ว")
-
-        # ส่งอีเมลแจ้งคนที่ได้รับอนุมัติ
-        if req.get("email"):
-            body = (
-                f"สวัสดีคุณ {req['user_name']},\n\n"
-                f"ข่าวดี! เจ้าของ \"{req['pet_name']}\" อนุมัติคำขอรับเลี้ยงของคุณแล้วครับ 🎉\n"
-                f"กรุณาติดต่อกลับผ่านช่องทางที่คุณให้ไว้ตอนส่งคำขอ "
-                f"เพื่อนัดวันรับตัวได้เลย\n\n"
-                f"— PetHome"
-            )
-
-            send_email(
-                req["email"],
-                f"คำขอรับเลี้ยง {req['pet_name']} ของคุณได้รับการอนุมัติ 🎉",
-                body
->>>>>>> origin/main:pethome/app.py
             )
 
     cursor.close()
@@ -1005,15 +868,9 @@ def reject_request(request_id):
     conn = get_db()
     cursor = conn.cursor(dictionary=True)
     cursor.execute(
-<<<<<<< HEAD:backend/app.py
           """SELECT adoption_requests.*, pets.user_id AS owner_id
               FROM adoption_requests JOIN pets ON adoption_requests.pet_id = pets.id
               WHERE adoption_requests.id = %s""",
-=======
-        """SELECT Adoption.*, Pet.owner_id AS owner_id, Pet.name AS pet_name
-           FROM Adoption JOIN Pet ON Adoption.pet_id = Pet.pet_id
-           WHERE Adoption.request_id = %s""",
->>>>>>> origin/main:pethome/app.py
         (request_id,),
     )
     req = cursor.fetchone()
