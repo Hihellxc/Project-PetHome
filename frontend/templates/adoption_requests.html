@@ -19,10 +19,14 @@
     </div>
     {% if req.status == 'pending' and req.pet_status != 'adopted' %}
     <div>
-      <a href="{{ url_for('approve_request', request_id=req.request_id) }}"
-         class="btn btn-sm btn-success">อนุมัติ</a>
-      <a href="{{ url_for('reject_request', request_id=req.request_id) }}"
-         class="btn btn-sm btn-danger">ปฏิเสธ</a>
+      <form method="POST" action="{{ url_for('approve_request', request_id=req.request_id) }}" class="d-inline">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-sm btn-success">อนุมัติ</button>
+      </form>
+      <form method="POST" action="{{ url_for('reject_request', request_id=req.request_id) }}" class="d-inline">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-sm btn-danger">ปฏิเสธ</button>
+      </form>
     </div>
     {% endif %}
   </div>

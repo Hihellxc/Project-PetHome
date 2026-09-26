@@ -45,6 +45,7 @@
         ข้อมูลเพิ่มเติมด้านล่างช่วยให้เจ้าของตัดสินใจได้ง่ายขึ้น (ช่องที่ไม่มี * ไม่กรอกก็ได้)
       </p>
       <form method="POST" action="{{ url_for('send_adoption_request', pet_id=pet.pet_id) }}" class="row g-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
         <div class="col-md-6">
           <label class="form-label">ชื่อของคุณ *</label>

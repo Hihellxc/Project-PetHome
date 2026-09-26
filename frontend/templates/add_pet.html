@@ -6,6 +6,7 @@
 
 <div class="form-panel">
   <form method="POST" action="{{ url_for('add_pet') }}" enctype="multipart/form-data" class="row g-3"> <!-- เพิ่ม enctype="multipart/form-data" เพื่อให้สามารถอัปโหลดไฟล์รูปภาพได้ -->
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
     <div class="col-md-6">
       <label class="form-label">ชื่อสัตว์</label>

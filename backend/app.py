@@ -11,6 +11,7 @@ import mysql.connector
 from datetime import datetime
 from dotenv import load_dotenv
 from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask_wtf.csrf import CSRFProtect
 from werkzeug.security import generate_password_hash, check_password_hash #แอดมินไม่เห็นรหัสของผู้ใช้
 from werkzeug.utils import secure_filename
 
@@ -30,8 +31,9 @@ app = Flask(
     template_folder=os.path.join(FRONTEND_DIR, "templates"),
     static_folder=os.path.join(FRONTEND_DIR, "static"),
 )
-# อ่าน secret key จาก environment variable ก่อน ถ้าไม่มีค่อยใช้ค่า default (สำหรับรันในเครื่องตัวเอง)
-app.secret_key = os.environ.get("SECRET_KEY", "pethome-secret-key")
+# ใช้ secret จาก environment; ถ้าไม่มีจะสร้างชั่วคราวสำหรับการรันเครื่อง local
+app.secret_key = os.environ.get("SECRET_KEY") or secrets.token_hex(32)
+csrf = CSRFProtect(app)
 
 # หมายเหตุสำคัญ:
 # แพลตฟอร์ม cloud อย่าง Aiven จะสร้างฐานข้อมูล MySQL ให้ แล้วให้ค่าการเชื่อมต่อมา
@@ -41,7 +43,7 @@ DB_CONFIG = {
     "host": os.environ.get("MYSQLHOST", "localhost"),
     "port": int(os.environ.get("MYSQLPORT", 3306)),
     "user": os.environ.get("MYSQLUSER", "root"),
-    "password": os.environ.get("MYSQLPASSWORD", "123456"),
+    "password": os.environ.get("MYSQLPASSWORD", ""),
     "database": os.environ.get("MYSQLDATABASE", "pethome"),
 }
 
@@ -229,7 +231,7 @@ def login():
     return render_template("login.html")
 
 
-@app.route("/logout")
+@app.route("/logout", methods=["POST"])
 def logout():
     session.clear()
     flash("ออกจากระบบแล้ว")
@@ -375,7 +377,7 @@ def edit_pet(pet_id):
     return render_template("edit_pet.html", pet=pet, provinces=THAI_PROVINCES)
 
 
-@app.route("/delete_pet/<int:pet_id>")
+@app.route("/delete_pet/<int:pet_id>", methods=["POST"])
 @login_required
 def delete_pet(pet_id):
     conn = get_db()
@@ -527,7 +529,7 @@ def adoption_requests():
     return render_template("adoption_requests.html", requests=requests_list)
 
 
-@app.route("/request/<int:request_id>/approve")
+@app.route("/request/<int:request_id>/approve", methods=["POST"])
 @login_required
 def approve_request(request_id):
     conn = get_db()
@@ -563,7 +565,7 @@ def approve_request(request_id):
     return redirect(url_for("adoption_requests"))
 
 
-@app.route("/request/<int:request_id>/reject")
+@app.route("/request/<int:request_id>/reject", methods=["POST"])
 @login_required
 def reject_request(request_id):
     conn = get_db()

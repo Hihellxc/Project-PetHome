@@ -41,9 +41,11 @@
       <td>
         <a href="{{ url_for('pet_detail', pet_id=pet.pet_id) }}" class="btn btn-sm btn-outline-primary">ดู</a>
         <a href="{{ url_for('edit_pet', pet_id=pet.pet_id) }}" class="btn btn-sm btn-outline-warning">แก้ไข</a>
-        <a href="{{ url_for('delete_pet', pet_id=pet.pet_id) }}"
-           class="btn btn-sm btn-outline-danger"
-           onclick="return confirmDelete()">ลบ</a>
+        <form method="POST" action="{{ url_for('delete_pet', pet_id=pet.pet_id) }}" class="d-inline"
+              onsubmit="return confirmDelete()">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-sm btn-outline-danger">ลบ</button>
+        </form>
       </td>
     </tr>
     {% else %}
