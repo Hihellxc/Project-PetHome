@@ -15,16 +15,23 @@ import secrets
 import mysql.connector
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask_wtf.csrf import CSRFProtect
 from werkzeug.security import generate_password_hash, check_password_hash #แอดมินไม่เห็นรหัสของผู้ใช้
 from werkzeug.utils import secure_filename
 import cloudinary
 import cloudinary.uploader #เพื่ออัปโหลดรูปไปเก็บบน Cloudinary แทนเก็บไว้ในเครื่องตัวเอง
 
 # ---------- ตั้งค่าเบื้องต้น ----------
-app = Flask(__name__)
-# อ่าน secret key จาก environment variable ก่อน ถ้าไม่มีค่อยใช้ค่า default (สำหรับรันในเครื่องตัวเอง)
-app.secret_key = os.environ.get("SECRET_KEY", "pethome-secret-key")
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+FRONTEND_DIR = os.path.join(PROJECT_ROOT, "frontend")
+app = Flask(
+    __name__,
+    template_folder=os.path.join(FRONTEND_DIR, "templates"),
+    static_folder=os.path.join(FRONTEND_DIR, "static"),
+)
+# ใช้ secret จาก environment; ถ้าไม่มีจะสร้างชั่วคราวสำหรับการรันเครื่อง local
+app.secret_key = os.environ.get("SECRET_KEY") or secrets.token_hex(32)
+csrf = CSRFProtect(app)
 
 
 def login_required(view_func):
@@ -46,7 +53,7 @@ DB_CONFIG = {
     "host": os.environ.get("MYSQLHOST", "localhost"),
     "port": int(os.environ.get("MYSQLPORT", 3306)),
     "user": os.environ.get("MYSQLUSER", "root"),
-    "password": os.environ.get("MYSQLPASSWORD", "123456"),
+    "password": os.environ.get("MYSQLPASSWORD", ""),
     "database": os.environ.get("MYSQLDATABASE", "pethome"),
 }
 
@@ -61,7 +68,7 @@ DB_CONFIG["ssl_disabled"] = False
 DB_CONFIG["ssl_verify_cert"] = False
 DB_CONFIG["ssl_verify_identity"] = False
 
-UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads")
+UPLOAD_FOLDER = os.path.join(FRONTEND_DIR, "static", "uploads")
 ALLOWED_EXT = {"png", "jpg", "jpeg", "gif"} #อนุญาตให้อัปโหลดเฉพาะไฟล์รูป
 
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
@@ -70,19 +77,17 @@ app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 THAI_PROVINCES = [
     "กรุงเทพมหานคร", "กระบี่", "กาญจนบุรี", "กาฬสินธุ์", "กำแพงเพชร",
     "ขอนแก่น", "จันทบุรี", "ฉะเชิงเทรา", "ชลบุรี", "ชัยนาท",
-    "ชัยภูมิ", "ชุมพร", "เชียงราย", "เชียงใหม่", "ตรัง",
-    "ตราด", "ตาก", "นครนายก", "นครปฐม", "นครพนม",
-    "นครราชสีมา", "นครศรีธรรมราช", "นครสวรรค์", "นนทบุรี", "นราธิวาส",
-    "น่าน", "บึงกาฬ", "บุรีรัมย์", "ปทุมธานี", "ประจวบคีรีขันธ์",
-    "ปราจีนบุรี", "ปัตตานี", "พระนครศรีอยุธยา", "พังงา", "พัทลุง",
-    "พิจิตร", "พิษณุโลก", "เพชรบุรี", "เพชรบูรณ์", "แพร่",
-    "ภูเก็ต", "มหาสารคาม", "มุกดาหาร", "แม่ฮ่องสอน", "ยโสธร",
-    "ยะลา", "ร้อยเอ็ด", "ระนอง", "ระยอง", "ราชบุรี",
-    "ลพบุรี", "ลำปาง", "ลำพูน", "เลย", "ศรีสะเกษ",
-    "สกลนคร", "สงขลา", "สตูล", "สมุทรปราการ", "สมุทรสงคราม",
-    "สมุทรสาคร", "สระแก้ว", "สระบุรี", "สิงห์บุรี", "สุโขทัย",
-    "สุพรรณบุรี", "สุราษฎร์ธานี", "สุรินทร์", "หนองคาย", "หนองบัวลำภู",
-    "อยุธยา", "อ่างทอง", "อำนาจเจริญ", "อุดรธานี", "อุตรดิตถ์",
+    "ชัยภูมิ", "ชุมพร", "เชียงราย", "เชียงใหม่", "ตรัง", "ตราด",
+    "ตาก", "นครนายก", "นครปฐม", "นครพนม", "นครราชสีมา",
+    "นครศรีธรรมราช", "นครสวรรค์", "นนทบุรี", "นราธิวาส", "น่าน",
+    "บึงกาฬ", "บุรีรัมย์", "ปทุมธานี", "ประจวบคีรีขันธ์", "ปราจีนบุรี",
+    "ปัตตานี", "พระนครศรีอยุธยา", "พังงา", "พัทลุง", "พิจิตร", "พิษณุโลก",
+    "เพชรบุรี", "เพชรบูรณ์", "แพร่", "ภูเก็ต", "มหาสารคาม", "มุกดาหาร",
+    "แม่ฮ่องสอน", "ยโสธร", "ยะลา", "ร้อยเอ็ด", "ระนอง", "ระยอง", "ราชบุรี",
+    "ลพบุรี", "ลำปาง", "ลำพูน", "เลย", "ศรีสะเกษ", "สกลนคร", "สงขลา",
+    "สตูล", "สมุทรปราการ", "สมุทรสงคราม", "สมุทรสาคร", "สระแก้ว", "สระบุรี",
+    "สิงห์บุรี", "สุโขทัย", "สุพรรณบุรี", "สุราษฎร์ธานี", "สุรินทร์", "หนองคาย",
+    "หนองบัวลำภู", "อยุธยา", "อ่างทอง", "อำนาจเจริญ", "อุดรธานี", "อุตรดิตถ์",
     "อุทัยธานี", "อุบลราชธานี",
 ]
 
@@ -92,71 +97,19 @@ THAI_PROVINCES = [
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 
-# ---------- ฟังก์ชันช่วยเหลือ (Helper) ----------
-
 def get_db():
     """เปิดการเชื่อมต่อ MySQL"""
-    conn = mysql.connector.connect(**DB_CONFIG)
-    return conn
+    return mysql.connector.connect(**DB_CONFIG)
 
 
 def init_db():
-    """สร้างตารางฐานข้อมูล ถ้ายังไม่มี (รันครั้งแรกครั้งเดียว)"""
+    """สร้างตารางจาก schema หลัก ถ้ายังไม่มี"""
     conn = get_db()
     cur = conn.cursor()
-
-    # ตาราง User
-    # หมายเหตุ: MySQL ใช้ "AUTO_INCREMENT" (มีขีดล่าง) ไม่ใช่ "AUTOINCREMENT" แบบ SQLite
-    # และคอลัมน์ที่จะใช้ UNIQUE ต้องเป็น VARCHAR (กำหนดความยาว) ไม่ใช่ TEXT
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS User (
-            user_id INT AUTO_INCREMENT PRIMARY KEY,
-            name VARCHAR(100) NOT NULL,
-            email VARCHAR(150) UNIQUE NOT NULL,
-            password VARCHAR(255) NOT NULL,
-            reset_token VARCHAR(255),
-            reset_token_expiry DATETIME
-        )
-    """)
-
-    # ตาราง Pet
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS Pet (
-            pet_id INT AUTO_INCREMENT PRIMARY KEY,
-            owner_id INT NOT NULL,
-            name VARCHAR(100) NOT NULL,
-            type VARCHAR(50) NOT NULL,
-            gender VARCHAR(20) NOT NULL,
-            age INT NOT NULL,
-            province VARCHAR(100) NOT NULL,
-            description TEXT,
-            image VARCHAR(255),
-            status VARCHAR(20) DEFAULT 'Available',
-            created_at DATETIME,
-            FOREIGN KEY (owner_id) REFERENCES User(user_id)
-        )
-    """)
-
-    # ตาราง Adoption
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS Adoption (
-            request_id INT AUTO_INCREMENT PRIMARY KEY,
-            pet_id INT NOT NULL,
-            user_name VARCHAR(100) NOT NULL,
-            phone VARCHAR(20) NOT NULL,
-            email VARCHAR(150),
-            province VARCHAR(100),
-            occupation VARCHAR(100),
-            pet_experience VARCHAR(20),
-            housing_type VARCHAR(50),
-            household_info TEXT,
-            message TEXT,
-            status VARCHAR(20) DEFAULT 'Pending',
-            created_at DATETIME,
-            FOREIGN KEY (pet_id) REFERENCES Pet(pet_id)
-        )
-    """)
-
+    with open(os.path.join(PROJECT_ROOT, "database", "schema.sql"), encoding="utf-8") as schema_file:
+        statements = [statement.strip() for statement in schema_file.read().split(";") if statement.strip()]
+    for statement in statements:
+        cur.execute(statement)
     conn.commit()
     cur.close()
     conn.close()
@@ -278,22 +231,42 @@ def home():
     province = request.args.get("province", "")
 
     conn = get_db()
-    cursor = conn.cursor(dictionary=True) # ใช้ dictionary=True เพื่อให้ผลลัพธ์เป็น dict แทน tuple
+    # ตรวจสอบว่า Render กำลังใช้ Database ตัวไหน
+    debug_cursor = conn.cursor()
+    debug_cursor.execute("SELECT DATABASE(), @@hostname")
+    db_info = debug_cursor.fetchone()
+    print("================================")
+    print("DATABASE:", db_info[0])
+    print("HOST:", db_info[1])
 
-    query = "SELECT * FROM Pet WHERE status = 'Available'"
+    debug_cursor.execute("SELECT COUNT(*) FROM pets")
+    pet_count = debug_cursor.fetchone()[0]
+    print("PET COUNT:", pet_count)
+    print("================================")
+
+    debug_cursor.close()
+
+    cursor = conn.cursor(dictionary=True)
+
+    query = """
+        SELECT pets.*, pets.id AS pet_id, pets.species AS type,
+               ROUND(pets.age_months / 12, 1) AS age,
+               COALESCE(pet_images.image_url, '') AS image
+        FROM pets
+        LEFT JOIN pet_images ON pet_images.pet_id = pets.id AND pet_images.is_primary = 1
+        WHERE pets.status = 'available'
+    """
     params = []
 
     if pet_type:
-        query += " AND type = %s"
+        query += " AND pets.species = %s"
         params.append(pet_type)
 
     if province:
-        query += " AND province LIKE %s"
+        query += " AND pets.province LIKE %s"
         params.append(f"%{province}%")
 
-    query += " ORDER BY created_at DESC"
-    # หมายเหตุ: cursor.execute() ของ mysql.connector คืนค่า None (ไม่ใช่ cursor)
-    # จึงต่อ .fetchall() ท้าย execute() แบบ sqlite ไม่ได้ ต้องแยกเป็นคนละบรรทัด
+    query += " ORDER BY pets.created_at DESC"
     cursor.execute(query, params)
     pets = cursor.fetchall()
     cursor.close()
@@ -317,7 +290,7 @@ def register():
         cursor = conn.cursor()
         try:
             cursor.execute(
-                "INSERT INTO User (name, email, password) VALUES (%s, %s, %s)",
+                "INSERT INTO users (name, email, password_hash) VALUES (%s, %s, %s)",
                 (name, email, hashed_password),
             )
             conn.commit()
@@ -342,13 +315,13 @@ def login():
 
         conn = get_db()
         cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM User WHERE email = %s", (email,))
+        cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
         user = cursor.fetchone()
         cursor.close()
         conn.close()
 
-        if user and check_password_hash(user["password"], password):
-            session["user_id"] = user["user_id"]
+        if user and check_password_hash(user["password_hash"], password):
+            session["user_id"] = user["id"]
             session["user_name"] = user["name"]
             flash(f"ยินดีต้อนรับ {user['name']}")
             return redirect(url_for("home"))
@@ -359,7 +332,7 @@ def login():
     return render_template("login.html")
 
 
-@app.route("/logout")
+@app.route("/logout", methods=["POST"])
 def logout():
     session.clear()
     flash("ออกจากระบบแล้ว")
@@ -528,8 +501,8 @@ def add_pet():
     if request.method == "POST":
         name = request.form["name"]
         pet_type = request.form["type"]
-        gender = request.form["gender"]
-        age = request.form["age"]
+        gender = {"ผู้": "male", "เมีย": "female"}.get(request.form["gender"], "unknown")
+        age = int(request.form["age"]) * 12
         province = request.form["province"]
         description = request.form["description"]
 
@@ -558,15 +531,21 @@ def add_pet():
         conn = get_db()
         cursor = conn.cursor()
         cursor.execute(
-            """INSERT INTO Pet (owner_id, name, type, gender, age, province,
-               description, image, status, created_at)
-               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'Available', %s)""",
+            """INSERT INTO pets (user_id, name, species, gender, age_months, province,
+               description, status, created_at)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, 'available', %s)""",
             # หมายเหตุ: ส่ง datetime.now() เป็น object ตรงๆ แทนการแปลงเป็น string ด้วย isoformat()
             # เพราะ isoformat() คั่นวันที่กับเวลาด้วยตัว "T" (เช่น 2026-01-01T12:00:00)
             # ซึ่งคอลัมน์ประเภท DATETIME ของ MySQL ไม่รับรูปแบบนี้โดยตรง ต้องให้ driver แปลงให้เอง
             (session["user_id"], name, pet_type, gender, age, province,
-             description, image_filename, datetime.now()),
+             description, datetime.now()),
         )
+        pet_id = cursor.lastrowid
+        if image_filename:
+            cursor.execute(
+                "INSERT INTO pet_images (pet_id, image_url, is_primary) VALUES (%s, %s, 1)",
+                (pet_id, image_filename),
+            )
         conn.commit()
         cursor.close()
         conn.close()
@@ -582,7 +561,16 @@ def add_pet():
 def edit_pet(pet_id):
     conn = get_db()
     cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM Pet WHERE pet_id = %s", (pet_id,))
+    cursor.execute(
+        """SELECT pets.*, pets.id AS pet_id, pets.species AS type,
+                  ROUND(pets.age_months / 12, 1) AS age,
+                  COALESCE(pet_images.image_url, '') AS image,
+                  pets.user_id AS owner_id
+           FROM pets
+           LEFT JOIN pet_images ON pet_images.pet_id = pets.id AND pet_images.is_primary = 1
+           WHERE pets.id = %s""",
+        (pet_id,),
+    )
     pet = cursor.fetchone()
 
     # เช็คว่าเป็นเจ้าของประกาศจริงหรือไม่
@@ -595,11 +583,13 @@ def edit_pet(pet_id):
     if request.method == "POST":
         name = request.form["name"]
         pet_type = request.form["type"]
-        gender = request.form["gender"]
-        age = request.form["age"]
+        gender = {"ผู้": "male", "เมีย": "female"}.get(request.form["gender"], "unknown")
+        age = int(request.form["age"]) * 12
         province = request.form["province"]
         description = request.form["description"]
-        status = request.form["status"]
+        status = {"Available": "available", "Adopted": "adopted"}.get(
+            request.form["status"], "available"
+        )
 
         image_filename = pet["image"]
         image_file = request.files.get("image")
@@ -620,11 +610,17 @@ def edit_pet(pet_id):
         # หมายเหตุ: connection object ของ mysql.connector ไม่มีเมธอด .execute()
         # ต้องสั่งผ่าน cursor เท่านั้น (ใช้ cursor ตัวเดิมที่เปิดไว้ด้านบนได้เลย)
         cursor.execute(
-            """UPDATE Pet SET name=%s, type=%s, gender=%s, age=%s, province=%s,
-               description=%s, image=%s, status=%s WHERE pet_id=%s""",
+            """UPDATE pets SET name=%s, species=%s, gender=%s, age_months=%s,
+               province=%s, description=%s, status=%s WHERE id=%s""",
             (name, pet_type, gender, age, province, description,
-             image_filename, status, pet_id),
+             status, pet_id),
         )
+        if image_filename and image_filename != pet["image"]:
+            cursor.execute("DELETE FROM pet_images WHERE pet_id = %s", (pet_id,))
+            cursor.execute(
+                "INSERT INTO pet_images (pet_id, image_url, is_primary) VALUES (%s, %s, 1)",
+                (pet_id, image_filename),
+            )
         conn.commit()
         cursor.close()
         conn.close()
@@ -637,17 +633,17 @@ def edit_pet(pet_id):
     return render_template("edit_pet.html", pet=pet, provinces=THAI_PROVINCES)
 
 
-@app.route("/delete_pet/<int:pet_id>")
+@app.route("/delete_pet/<int:pet_id>", methods=["POST"])
 @login_required
 def delete_pet(pet_id):
     conn = get_db()
     cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM Pet WHERE pet_id = %s", (pet_id,))
+    cursor.execute("SELECT id, user_id FROM pets WHERE id = %s", (pet_id,))
     pet = cursor.fetchone()
 
-    if pet and pet["owner_id"] == session["user_id"]:
-        cursor.execute("DELETE FROM Adoption WHERE pet_id = %s", (pet_id,))
-        cursor.execute("DELETE FROM Pet WHERE pet_id = %s", (pet_id,))
+    if pet and pet["user_id"] == session["user_id"]:
+        cursor.execute("DELETE FROM adoption_requests WHERE pet_id = %s", (pet_id,))
+        cursor.execute("DELETE FROM pets WHERE id = %s", (pet_id,))
         conn.commit()
         flash("ลบประกาศสำเร็จ")
     else:
@@ -664,7 +660,12 @@ def my_pets():
     conn = get_db()
     cursor = conn.cursor(dictionary=True)
     cursor.execute(
-        "SELECT * FROM Pet WHERE owner_id = %s ORDER BY created_at DESC",
+        """SELECT pets.*, pets.id AS pet_id, pets.species AS type,
+              ROUND(pets.age_months / 12, 1) AS age,
+              COALESCE(pet_images.image_url, '') AS image
+           FROM pets
+           LEFT JOIN pet_images ON pet_images.pet_id = pets.id AND pet_images.is_primary = 1
+           WHERE pets.user_id = %s ORDER BY pets.created_at DESC""",
         (session["user_id"],),
     )
     pets = cursor.fetchall()
@@ -680,9 +681,14 @@ def pet_detail(pet_id):
     conn = get_db()
     cursor = conn.cursor(dictionary=True)
     cursor.execute(
-        """SELECT Pet.*, User.name AS owner_name, User.email AS owner_email
-           FROM Pet JOIN User ON Pet.owner_id = User.user_id
-           WHERE Pet.pet_id = %s""",
+         """SELECT pets.*, pets.id AS pet_id, pets.species AS type,
+                ROUND(pets.age_months / 12, 1) AS age,
+                COALESCE(pet_images.image_url, '') AS image,
+                users.name AS owner_name, users.email AS owner_email
+            FROM pets
+            JOIN users ON pets.user_id = users.id
+            LEFT JOIN pet_images ON pet_images.pet_id = pets.id AND pet_images.is_primary = 1
+            WHERE pets.id = %s""",
         (pet_id,),
     )
     pet = cursor.fetchone()
@@ -724,13 +730,39 @@ def send_adoption_request(pet_id):
     info_cursor.close()
 
     cursor = conn.cursor()
+    applicant_email = email or f"guest-{secrets.token_hex(8)}@pethome.local"
+    cursor.execute("SELECT id FROM users WHERE email = %s", (applicant_email,))
+    applicant = cursor.fetchone()
+    if applicant:
+        applicant_id = applicant[0]
+        cursor.execute(
+            "UPDATE users SET name = %s, phone_number = %s WHERE id = %s",
+            (user_name, phone, applicant_id),
+        )
+    else:
+        cursor.execute(
+            """INSERT INTO users (name, email, password_hash, phone_number)
+               VALUES (%s, %s, %s, %s)""",
+            (user_name, applicant_email, generate_password_hash(secrets.token_urlsafe(24)), phone),
+        )
+        applicant_id = cursor.lastrowid
+
+    experience_note = " | ".join(
+        value for value in (
+            f"อาชีพ: {occupation}" if occupation else "",
+            f"ประสบการณ์: {pet_experience}" if pet_experience else "",
+            f"สมาชิกในบ้าน: {household_info}" if household_info else "",
+            f"จังหวัด: {province}" if province else "",
+        ) if value
+    )
+    contact_channel = " | ".join(value for value in (phone, email) if value)
     cursor.execute(
-        """INSERT INTO Adoption (pet_id, user_name, phone, email, province,
-           occupation, pet_experience, housing_type, household_info,
-           message, status, created_at)
-           VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'Pending', %s)""",
-        (pet_id, user_name, phone, email, province, occupation,
-         pet_experience, housing_type, household_info, message, datetime.now()),
+        """INSERT INTO adoption_requests
+           (pet_id, applicant_id, housing_type, housing_permission,
+            experience_note, contact_channel, message, status)
+           VALUES (%s, %s, %s, 1, %s, %s, %s, 'pending')""",
+        (pet_id, applicant_id, housing_type or "ไม่ระบุ", experience_note,
+         contact_channel, message),
     )
     conn.commit()
     cursor.close()
@@ -782,10 +814,15 @@ def adoption_requests():
     conn = get_db()
     cursor = conn.cursor(dictionary=True)
     cursor.execute(
-        """SELECT Adoption.*, Pet.name AS pet_name, Pet.pet_id AS pet_id
-           FROM Adoption JOIN Pet ON Adoption.pet_id = Pet.pet_id
-           WHERE Pet.owner_id = %s
-           ORDER BY Adoption.created_at DESC""",
+         """SELECT adoption_requests.*, adoption_requests.id AS request_id,
+                users.name AS user_name, users.phone_number AS phone,
+                users.email AS email, pets.name AS pet_name,
+                pets.id AS pet_id, pets.status AS pet_status
+            FROM adoption_requests
+            JOIN pets ON adoption_requests.pet_id = pets.id
+            JOIN users ON adoption_requests.applicant_id = users.id
+            WHERE pets.user_id = %s
+            ORDER BY adoption_requests.created_at DESC""",
         (session["user_id"],),
     )
     requests_list = cursor.fetchall()
@@ -794,62 +831,32 @@ def adoption_requests():
     return render_template("adoption_requests.html", requests=requests_list)
 
 
-@app.route("/request/<int:request_id>/approve")
+@app.route("/request/<int:request_id>/approve", methods=["POST"])
 @login_required
 def approve_request(request_id):
     conn = get_db()
     cursor = conn.cursor(dictionary=True)
     # หา request และเช็คว่าสัตว์นี้เป็นของ user ที่ login อยู่จริง
     cursor.execute(
-        """SELECT Adoption.*, Pet.owner_id AS owner_id, Pet.name AS pet_name
-           FROM Adoption JOIN Pet ON Adoption.pet_id = Pet.pet_id
-           WHERE Adoption.request_id = %s""",
+        """SELECT adoption_requests.*, adoption_requests.id AS request_id,
+                pets.user_id AS owner_id, pets.status AS pet_status,
+                pets.id AS pet_id
+           FROM adoption_requests JOIN pets ON adoption_requests.pet_id = pets.id
+           WHERE adoption_requests.id = %s""",
         (request_id,),
     )
     req = cursor.fetchone()
 
     if req and req["owner_id"] == session["user_id"]:
-
-        # อนุมัติคนที่เจ้าของเลือก
-        cursor.execute(
-            "UPDATE Adoption SET status='Approved' WHERE request_id=%s",
-            (request_id,)
-        )
-
-        # เปลี่ยนสถานะสัตว์เป็น Adopted
-        cursor.execute(
-            "UPDATE Pet SET status='Adopted' WHERE pet_id=%s",
-            (req["pet_id"],)
-        )
-
-        # ปฏิเสธคำขออื่น ๆ ที่ยังรอดำเนินการ
-        # สำหรับสัตว์ตัวเดียวกัน
-        cursor.execute(
-            """UPDATE Adoption
-            SET status='Rejected'
-            WHERE pet_id=%s
-                AND request_id != %s
-                AND status='Pending'""",
-            (req["pet_id"], request_id)
-        )
-
-        conn.commit()
-        flash("อนุมัติคำขอสำเร็จ และปฏิเสธคำขออื่นสำหรับสัตว์ตัวนี้แล้ว")
-
-        # ส่งอีเมลแจ้งคนที่ได้รับอนุมัติ
-        if req.get("email"):
-            body = (
-                f"สวัสดีคุณ {req['user_name']},\n\n"
-                f"ข่าวดี! เจ้าของ \"{req['pet_name']}\" อนุมัติคำขอรับเลี้ยงของคุณแล้วครับ 🎉\n"
-                f"กรุณาติดต่อกลับผ่านช่องทางที่คุณให้ไว้ตอนส่งคำขอ "
-                f"เพื่อนัดวันรับตัวได้เลย\n\n"
-                f"— PetHome"
-            )
-
-            send_email(
-                req["email"],
-                f"คำขอรับเลี้ยง {req['pet_name']} ของคุณได้รับการอนุมัติ 🎉",
-                body
+        if req["pet_status"] == "adopted":
+            flash("สัตว์ตัวนี้มีผู้ได้รับอนุมัติไปแล้ว ไม่สามารถอนุมัติคำขออื่นซ้ำได้")
+        else:
+            cursor.execute("UPDATE adoption_requests SET status='approved' WHERE id=%s", (request_id,))
+            cursor.execute("UPDATE pets SET status='adopted' WHERE id=%s", (req["pet_id"],))
+            cursor.execute(
+                """UPDATE adoption_requests SET status='rejected'
+                   WHERE pet_id=%s AND status='pending' AND id != %s""",
+                (req["pet_id"], request_id),
             )
 
     cursor.close()
@@ -857,21 +864,21 @@ def approve_request(request_id):
     return redirect(url_for("adoption_requests"))
 
 
-@app.route("/request/<int:request_id>/reject")
+@app.route("/request/<int:request_id>/reject", methods=["POST"])
 @login_required
 def reject_request(request_id):
     conn = get_db()
     cursor = conn.cursor(dictionary=True)
     cursor.execute(
-        """SELECT Adoption.*, Pet.owner_id AS owner_id, Pet.name AS pet_name
-           FROM Adoption JOIN Pet ON Adoption.pet_id = Pet.pet_id
-           WHERE Adoption.request_id = %s""",
+          """SELECT adoption_requests.*, pets.user_id AS owner_id
+              FROM adoption_requests JOIN pets ON adoption_requests.pet_id = pets.id
+              WHERE adoption_requests.id = %s""",
         (request_id,),
     )
     req = cursor.fetchone()
 
     if req and req["owner_id"] == session["user_id"]:
-        cursor.execute("UPDATE Adoption SET status='Rejected' WHERE request_id=%s", (request_id,))
+        cursor.execute("UPDATE adoption_requests SET status='rejected' WHERE id=%s", (request_id,))
         conn.commit()
         flash("ปฏิเสธคำขอสำเร็จ")
 
