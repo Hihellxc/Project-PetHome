@@ -229,6 +229,8 @@ def send_email(to_address, subject, body):
 def home():
     pet_type = request.args.get("type", "")
     province = request.args.get("province", "")
+    page = max(request.args.get("page", 1, type=int), 1)
+    per_page = 12
 
     conn = get_db()
     # ตรวจสอบว่า Render กำลังใช้ Database ตัวไหน
@@ -267,13 +269,25 @@ def home():
         query += " AND pets.province LIKE %s"
         params.append(f"%{province}%")
 
-    query += " ORDER BY pets.created_at DESC"
-    cursor.execute(query, params)
+    count_query = query.replace(
+        "SELECT pets.*, pets.id AS pet_id, pets.species AS type,\n               FLOOR(COALESCE(pets.age_months, 0) / 12) AS age_years,\n               MOD(COALESCE(pets.age_months, 0), 12) AS age_remainder,\n               COALESCE(pet_images.image_url, '') AS image",
+        "SELECT COUNT(DISTINCT pets.id)"
+    )
+    cursor.execute(count_query, params)
+    total_pets = cursor.fetchone()["COUNT(DISTINCT pets.id)"]
+    total_pages = max((total_pets + per_page - 1) // per_page, 1)
+    page = min(page, total_pages)
+
+    query += " ORDER BY pets.created_at DESC LIMIT %s OFFSET %s"
+    cursor.execute(query, params + [per_page, (page - 1) * per_page])
     pets = cursor.fetchall()
     cursor.close()
     conn.close()
 
-    return render_template("home.html", pets=pets, pet_type=pet_type, province=province, provinces=THAI_PROVINCES)
+    return render_template(
+        "home.html", pets=pets, pet_type=pet_type, province=province,
+        provinces=THAI_PROVINCES, page=page, total_pages=total_pages,
+    )
 
 
 # ---------- สมัครสมาชิก / เข้าสู่ระบบ / ออกจากระบบ ----------
@@ -747,28 +761,42 @@ def pet_detail(pet_id):
 
 @app.route("/pet/<int:pet_id>/adopt", methods=["POST"])
 def send_adoption_request(pet_id):
-    user_name = request.form["user_name"]
-    phone = request.form["phone"]
-    email = request.form.get("email", "")
+    user_name = request.form.get("user_name", "").strip()
+    phone = request.form.get("phone", "").strip()
+    email = request.form.get("email", "").strip().lower()
     province = request.form.get("province", "")
     occupation = request.form.get("occupation", "")
     pet_experience = request.form.get("pet_experience", "")
     housing_type = request.form.get("housing_type", "")
     household_info = request.form.get("household_info", "")
-    message = request.form["message"]
+    message = request.form.get("message", "").strip()
 
     conn = get_db()
 
     # ดึงชื่อสัตว์ + ชื่อและอีเมลของเจ้าไว้ก่อน จะได้เอาไปใช้ส่งอีเมลแจ้งเตือน
     info_cursor = conn.cursor(dictionary=True)
     info_cursor.execute(
-          """SELECT pets.name AS pet_name, users.name AS owner_name, users.email AS owner_email
+          """SELECT pets.name AS pet_name, pets.status, pets.user_id AS owner_id,
+                    users.name AS owner_name, users.email AS owner_email
               FROM pets JOIN users ON pets.user_id = users.id
               WHERE pets.id = %s""",
         (pet_id,),
     )
     pet_owner = info_cursor.fetchone()
     info_cursor.close()
+
+    if not pet_owner:
+        conn.close()
+        flash("ไม่พบประกาศสัตว์นี้")
+        return redirect(url_for("home"))
+    if pet_owner["status"] != "available":
+        conn.close()
+        flash("สัตว์ตัวนี้มีผู้รับเลี้ยงแล้วหรือไม่เปิดรับคำขอ")
+        return redirect(url_for("pet_detail", pet_id=pet_id))
+    if pet_owner["owner_id"] == session.get("user_id"):
+        conn.close()
+        flash("ไม่สามารถส่งคำขอรับเลี้ยงประกาศของตัวเองได้")
+        return redirect(url_for("pet_detail", pet_id=pet_id))
 
     cursor = conn.cursor()
     applicant_email = email or f"guest-{secrets.token_hex(8)}@pethome.local"
@@ -787,6 +815,19 @@ def send_adoption_request(pet_id):
             (user_name, applicant_email, generate_password_hash(secrets.token_urlsafe(24)), phone),
         )
         applicant_id = cursor.lastrowid
+
+        cursor.execute(
+                """SELECT id FROM adoption_requests
+                     WHERE pet_id = %s AND applicant_id = %s
+                     LIMIT 1""",
+                (pet_id, applicant_id),
+        )
+        if cursor.fetchone():
+                conn.rollback()
+                cursor.close()
+                conn.close()
+                flash("คุณเคยส่งคำขอรับเลี้ยงสัตว์ตัวนี้แล้ว")
+                return redirect(url_for("pet_detail", pet_id=pet_id))
 
     experience_note = " | ".join(
         value for value in (
@@ -879,17 +920,22 @@ def approve_request(request_id):
     cursor = conn.cursor(dictionary=True)
     # หา request และเช็คว่าสัตว์นี้เป็นของ user ที่ login อยู่จริง
     cursor.execute(
-        """SELECT adoption_requests.*, adoption_requests.id AS request_id,
+            """SELECT adoption_requests.*, adoption_requests.id AS request_id,
                 pets.user_id AS owner_id, pets.status AS pet_status,
-                pets.id AS pet_id
-           FROM adoption_requests JOIN pets ON adoption_requests.pet_id = pets.id
+                 pets.id AS pet_id, pets.name AS pet_name,
+                 users.name AS applicant_name, users.email AS applicant_email
+             FROM adoption_requests
+             JOIN pets ON adoption_requests.pet_id = pets.id
+             JOIN users ON adoption_requests.applicant_id = users.id
            WHERE adoption_requests.id = %s""",
         (request_id,),
     )
     req = cursor.fetchone()
 
     if req and req["owner_id"] == session["user_id"]:
-        if req["pet_status"] == "adopted":
+        if req["status"] != "pending":
+            flash("คำขอนี้ได้รับการจัดการไปแล้ว")
+        elif req["pet_status"] == "adopted":
             flash("สัตว์ตัวนี้มีผู้ได้รับอนุมัติไปแล้ว ไม่สามารถอนุมัติคำขออื่นซ้ำได้")
         else:
             cursor.execute("UPDATE adoption_requests SET status='approved' WHERE id=%s", (request_id,))
@@ -900,6 +946,16 @@ def approve_request(request_id):
                 (req["pet_id"], request_id),
             )
             conn.commit()
+            flash("อนุมัติคำขอสำเร็จ")
+
+            if req.get("applicant_email") and not req["applicant_email"].endswith("@pethome.local"):
+                send_email(
+                    req["applicant_email"],
+                    f"ผลการขอรับเลี้ยง {req['pet_name']}",
+                    f"สวัสดีคุณ {req['applicant_name']},\n\n"
+                    f"คำขอรับเลี้ยง \"{req['pet_name']}\" ของคุณได้รับการอนุมัติแล้วครับ\n\n"
+                    "— PetHome",
+                )
 
     cursor.close()
     conn.close()
