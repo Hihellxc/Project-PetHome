@@ -30,8 +30,11 @@ app = Flask(
     template_folder=os.path.join(FRONTEND_DIR, "templates"),
     static_folder=os.path.join(FRONTEND_DIR, "static"),
 )
-# ใช้ secret จาก environment; ถ้าไม่มีจะสร้างชั่วคราวสำหรับการรันเครื่อง local
-app.secret_key = os.environ.get("SECRET_KEY") or secrets.token_hex(32)
+# ใช้ secret จาก environment; local อนุญาตให้สร้างชั่วคราว แต่ production ต้องตั้งค่าเอง
+SECRET_KEY = os.environ.get("SECRET_KEY")
+if os.environ.get("FLASK_ENV") == "production" and not SECRET_KEY:
+    raise RuntimeError("ต้องตั้งค่า SECRET_KEY ก่อนรันใน production")
+app.secret_key = SECRET_KEY or secrets.token_hex(32)
 csrf = CSRFProtect(app)
 
 
@@ -73,6 +76,7 @@ UPLOAD_FOLDER = os.path.join(FRONTEND_DIR, "static", "uploads")
 ALLOWED_EXT = {"png", "jpg", "jpeg", "gif"} #อนุญาตให้อัปโหลดเฉพาะไฟล์รูป
 
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024
 
 # รายชื่อ 77 จังหวัดของไทย ใช้แสดงเป็นตัวเลือกในช่องกรอกจังหวัด (พิมพ์ค้นหาได้ผ่าน <datalist>)
 THAI_PROVINCES = [
@@ -119,6 +123,27 @@ def init_db():
 def allowed_file(filename):
     """เช็คนามสกุลไฟล์รูปที่อนุญาต"""
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXT
+
+
+def allowed_image_upload(image_file):
+    """ตรวจทั้งนามสกุลและ MIME type เบื้องต้นของไฟล์รูป"""
+    allowed_mime_types = {"image/png", "image/jpeg", "image/gif"}
+    return (
+        bool(image_file and image_file.filename)
+        and allowed_file(image_file.filename)
+        and image_file.mimetype in allowed_mime_types
+    )
+
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}, 200
+
+
+@app.errorhandler(413)
+def request_entity_too_large(error):
+    flash("ไฟล์รูปภาพต้องมีขนาดไม่เกิน 5 MB")
+    return redirect(request.referrer or url_for("home"))
 
 
 # ---------- ตั้งค่าสำหรับส่งอีเมลผ่าน Resend ----------
@@ -471,7 +496,7 @@ def add_pet():
         image_file = request.files.get("image")
         image_filename = ""
         if image_file and image_file.filename:
-            if allowed_file(image_file.filename):
+            if allowed_image_upload(image_file):
                 try:
                     image_filename = upload_image(image_file)
                 except Exception as e:
@@ -479,7 +504,7 @@ def add_pet():
                     image_filename = ""
                     flash("อัปโหลดรูปภาพไม่สำเร็จ แต่ข้อมูลอื่นถูกบันทึกแล้ว")
             else:
-                flash("ไฟล์รูปภาพต้องเป็นนามสกุล png, jpg, jpeg หรือ gif เท่านั้น (บันทึกประกาศโดยไม่มีรูป)")
+                flash("กรุณาเลือกไฟล์รูป PNG, JPG หรือ GIF ที่มีขนาดไม่เกิน 5 MB (บันทึกประกาศโดยไม่มีรูป)")
 
         conn = get_db()
         cursor = conn.cursor()
@@ -553,14 +578,14 @@ def edit_pet(pet_id):
         image_filename = pet["image"]
         image_file = request.files.get("image")
         if image_file and image_file.filename:
-            if allowed_file(image_file.filename):
+            if allowed_image_upload(image_file):
                 try:
                     image_filename = upload_image(image_file)
                 except Exception as e:
                     print(f"บันทึกไฟล์รูปภาพไม่สำเร็จ: {e}")
                     flash("บันทึกรูปภาพใหม่ไม่สำเร็จ ระบบใช้รูปเดิมไว้ก่อน")
             else:
-                flash("ไฟล์รูปภาพต้องเป็นนามสกุล png, jpg, jpeg หรือ gif เท่านั้น (ใช้รูปเดิมไว้ก่อน)")
+                flash("กรุณาเลือกไฟล์รูป PNG, JPG หรือ GIF ที่มีขนาดไม่เกิน 5 MB (ใช้รูปเดิมไว้ก่อน)")
 
         # หมายเหตุ: connection object ของ mysql.connector ไม่มีเมธอด .execute()
         # ต้องสั่งผ่าน cursor เท่านั้น (ใช้ cursor ตัวเดิมที่เปิดไว้ด้านบนได้เลย)
