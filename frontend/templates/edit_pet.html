@@ -31,8 +31,8 @@
 
     <div class="col-md-3">
       <label class="form-label" for="breed">พันธุ์</label>
-      <input type="text" id="breed" name="breed" class="form-control" value="{{ pet.breed or '' }}"
-             maxlength="100" placeholder="เช่น ไทย, โกลเด้นรีทรีฟเวอร์">
+            <input type="text" id="breed" name="breed" class="form-control" value="{{ pet.breed or 'ไม่ทราบ' }}"
+              maxlength="100" placeholder="เช่น ไทย, โกลเด้นรีทรีฟเวอร์ (ถ้าไม่ทราบให้เว้นว่าง)">
     </div>
 
     <div class="col-md-3">

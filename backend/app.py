@@ -502,7 +502,7 @@ def add_pet():
     if request.method == "POST":
         name = request.form.get("name", "").strip()
         pet_type = request.form.get("type", "")
-        breed = request.form.get("breed", "").strip() or None
+        breed = request.form.get("breed", "").strip() or "ไม่ทราบ"
         gender_value = request.form.get("gender", "")
         province = request.form.get("province", "").strip()
         description = request.form.get("description", "").strip()
@@ -616,7 +616,7 @@ def edit_pet(pet_id):
     if request.method == "POST":
         name = request.form["name"]
         pet_type = request.form["type"]
-        breed = request.form.get("breed", "").strip() or None
+        breed = request.form.get("breed", "").strip() or "ไม่ทราบ"
         gender = {"ผู้": "male", "เมีย": "female"}.get(request.form["gender"], "unknown")
         age_years = int(request.form["age_years"])
         age_months = int(request.form["age_months"])

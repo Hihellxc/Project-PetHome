@@ -22,7 +22,7 @@
       </h2>
       <ul class="list-group list-group-flush mb-2">
         <li class="list-group-item bg-transparent">ประเภท: {{ pet.type }}</li>
-        <li class="list-group-item bg-transparent">พันธุ์: {{ pet.breed or 'ไม่ระบุ' }}</li>
+        <li class="list-group-item bg-transparent">พันธุ์: {{ pet.breed or 'ไม่ทราบ' }}</li>
         <li class="list-group-item bg-transparent">เพศ: {{ pet.gender }}</li>
         <li class="list-group-item bg-transparent">อายุ: {{ pet.age_years }} ปี{% if pet.age_remainder %} {{ pet.age_remainder }} เดือน{% endif %}</li>
         <li class="list-group-item bg-transparent">จังหวัด: {{ pet.province }}</li>

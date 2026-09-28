@@ -28,8 +28,8 @@
 
     <div class="col-md-4">
       <label class="form-label" for="breed">พันธุ์</label>
-      <input type="text" id="breed" name="breed" class="form-control" maxlength="100"
-             placeholder="เช่น ไทย, โกลเด้นรีทรีฟเวอร์">
+            <input type="text" id="breed" name="breed" class="form-control" maxlength="100"
+              placeholder="เช่น ไทย, โกลเด้นรีทรีฟเวอร์ (ถ้าไม่ทราบให้เว้นว่าง)">
     </div>
 
     <div class="col-md-4">
@@ -64,7 +64,7 @@
     <div class="col-md-6">
       <label class="form-label">จังหวัด</label>
       <select name="province" class="form-select" required>
-        <option value="" selected disabled>เลือกจังหวัด</option>
+        <option value="" selected disabled>-- เลือกจังหวัด --</option>
         {% for p in provinces %}
           <option value="{{ p }}">{{ p }}</option>
         {% endfor %}
