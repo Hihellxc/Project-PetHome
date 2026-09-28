@@ -22,6 +22,18 @@ htmlcov/
 # Logs
 *.log
 
+# Node.js dependencies (not required by the Flask app)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# IDE and operating-system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
 # Uploaded files
 frontend/static/uploads/*
 !frontend/static/uploads/.gitkeep

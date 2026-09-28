@@ -20,7 +20,7 @@ frontend/
 database/
 ├── schema.sql                  # โครงสร้างฐานข้อมูลหลัก
 └── migrations/                 # SQL สำหรับปรับฐานข้อมูลเดิม
-requirements.txt                # Python libraries
+backend/requirements.txt        # Python libraries
 Procfile                        # คำสั่ง deploy ด้วย Gunicorn
 README.md
 ```
@@ -28,7 +28,7 @@ README.md
 ## วิธีติดตั้งและรันในเครื่องตัวเอง
 
 ### 1. เตรียมฐานข้อมูล MySQL
-ต้องมี MySQL server อยู่แล้ว (ในเครื่องตัวเอง หรือฟรีบนคลาวด์อย่าง Aiven — ดู `RENDER_AIVEN_DEPLOY.md`)
+ต้องมี MySQL server อยู่แล้ว (ในเครื่องตัวเอง หรือใช้บริการ MySQL บนคลาวด์อย่าง Aiven)
 สร้างฐานข้อมูลและตารางด้วย:
 ```bash
 mysql -u root -p < database/schema.sql
@@ -52,8 +52,7 @@ $env:MYSQLDATABASE="pethome"
 
 ### 4. ติดตั้ง Python library ที่จำเป็น
 ```bash
-cd เข้าไปที่ backend
-pip install -r requirements.txt
+pip install -r backend/requirements.txt
 ```
 
 ### 5. รันเว็บไซต์
@@ -63,9 +62,18 @@ python -m backend.app
 ```
 เปิดเบราว์เซอร์ไปที่ `http://127.0.0.1:5000`
 
+ตรวจสอบสถานะเซิร์ฟเวอร์ได้ที่ `http://127.0.0.1:5000/health`
+
 ## Deploy ขึ้นคลาวด์
-ดูวิธีทำแบบทีละขั้นใน `RENDER_AIVEN_DEPLOY.md` — ใช้ **Render** (hosting เว็บ ฟรี) + **Aiven** (MySQL ฟรี)
-ทั้งสองไม่ต้องผูกบัตรเครดิต
+ใช้ **Render** เป็น hosting เว็บ และ **Aiven** เป็น MySQL ได้ โดยตั้งค่าตามคำสั่งด้านล่าง
+
+สำหรับ Render ให้ตั้งค่า:
+
+- **Build Command:** `pip install -r backend/requirements.txt`
+- **Start Command:** `gunicorn backend.app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 60`
+- **Environment Variables:** `SECRET_KEY`, `MYSQLHOST`, `MYSQLPORT`, `MYSQLUSER`, `MYSQLPASSWORD`, `MYSQLDATABASE`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL` และค่า Cloudinary ทั้งสามตัว
+
+ถ้าเป็นฐานข้อมูลเดิม ให้รัน migration ใน `database/migrations/001_adoption_request_indexes.sql` และ `database/migrations/002_add_pet_indexes.sql` ตามลำดับก่อนเปิดใช้งานจริง
 
 ## ฟีเจอร์หลัก
 1. **สมัครสมาชิก / เข้าสู่ระบบ / ออกจากระบบ** — เข้ารหัสรหัสผ่านด้วย `werkzeug.security`
