@@ -48,7 +48,8 @@ CREATE TABLE IF NOT EXISTS adoption_requests (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (pet_id) REFERENCES pets(id) ON DELETE CASCADE,
     FOREIGN KEY (applicant_id) REFERENCES users(id) ON DELETE CASCADE,
-    INDEX idx_pet_applicant (pet_id, applicant_id)
+    UNIQUE KEY uq_pet_applicant (pet_id, applicant_id),
+    INDEX idx_adoption_status (pet_id, status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS admin_audit_logs (
