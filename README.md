@@ -52,11 +52,13 @@ $env:MYSQLDATABASE="pethome"
 
 ### 4. ติดตั้ง Python library ที่จำเป็น
 ```bash
+cd เข้าไปที่ backend
 pip install -r requirements.txt
 ```
 
 ### 5. รันเว็บไซต์
 ```bash
+cd ออกมาที่ root หลัก
 python -m backend.app
 ```
 เปิดเบราว์เซอร์ไปที่ `http://127.0.0.1:5000`
