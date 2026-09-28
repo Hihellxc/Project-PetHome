@@ -13,7 +13,8 @@ from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
 import secrets
 import mysql.connector
-from datetime import datetime, timedelta
+from mysql.connector.errors import IntegrityError
+from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_wtf.csrf import CSRFProtect
 from werkzeug.security import generate_password_hash, check_password_hash #แอดมินไม่เห็นรหัสของผู้ใช้
@@ -374,115 +375,6 @@ def logout():
     return redirect(url_for("home"))
 
 
-# ---------- ขอรีเซ็ตรหัสผ่าน / ตั้งรหัสผ่านใหม่ ----------
-
-@app.route("/forgot_password", methods=["GET", "POST"])
-def forgot_password():
-    if request.method == "POST":
-        email = request.form["email"]
-
-        conn = get_db()
-        cursor = conn.cursor(dictionary=True)
-        print(f"[Forgot Password] request received | email={email!r}", flush=True)
-
-        cursor.execute("SELECT * FROM User WHERE email = %s", (email,))
-        user = cursor.fetchone()
-
-        print(
-            f"[Forgot Password] user found: {'YES' if user else 'NO'}",
-            flush=True
-        )
-
-        if user:
-            # สร้าง token แบบสุ่มที่คาดเดาไม่ได้ และตั้งอายุ 1 ชั่วโมง
-            token = secrets.token_urlsafe(32)
-            expiry = datetime.now() + timedelta(hours=1)
-            cursor.execute(
-                "UPDATE User SET reset_token=%s, reset_token_expiry=%s WHERE user_id=%s",
-                (token, expiry, user["user_id"]),
-            )
-            conn.commit()
-
-            reset_link = url_for("reset_password", token=token, _external=True)
-            body = (
-                f"สวัสดีคุณ {user['name']},\n\n"
-                f"มีการขอรีเซ็ตรหัสผ่านสำหรับบัญชี PetHome ของคุณ\n"
-                f"กดลิงก์นี้เพื่อตั้งรหัสผ่านใหม่ (ลิงก์จะหมดอายุใน 1 ชั่วโมง):\n\n"
-                f"{reset_link}\n\n"
-                f"ถ้าคุณไม่ได้ขอรีเซ็ตรหัสผ่าน สามารถละเลยอีเมลนี้ได้เลยค่ะ\n\n"
-                f"— PetHome"
-            )
-            print(
-                f"[Forgot Password] calling send_email() for {user['email']!r}",
-                flush=True
-            )
-            send_result = send_email(
-                user["email"],
-                "ขอรีเซ็ตรหัสผ่าน PetHome",
-                body
-            )
-            print(
-                f"[Forgot Password] send_email result: {send_result}",
-                flush=True
-            )
-
-        cursor.close()
-        conn.close()
-
-        # แสดงข้อความเดียวกันไม่ว่าจะเจออีเมลนี้ในระบบหรือไม่ ป้องกันการเดาว่าอีเมลไหนมีอยู่ในระบบบ้าง
-        flash("ถ้าอีเมลนี้มีอยู่ในระบบ เราได้ส่งลิงก์รีเซ็ตรหัสผ่านไปให้แล้ว กรุณาเช็คอีเมลของคุณ")
-        return redirect(url_for("login"))
-
-    return render_template("forgot_password.html")
-
-
-@app.route("/reset_password/<token>", methods=["GET", "POST"])
-def reset_password(token):
-    conn = get_db()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM User WHERE reset_token = %s", (token,))
-    user = cursor.fetchone()
-
-    # เช็คว่า token มีอยู่จริง และยังไม่หมดอายุ
-    # (กันไว้เผื่อ driver บางกรณีคืนค่าคอลัมน์ DATETIME มาเป็น string แทน datetime object)
-    expiry = user["reset_token_expiry"] if user else None
-    if isinstance(expiry, str):
-        expiry = datetime.fromisoformat(expiry)
-
-    if not user or expiry is None or datetime.now() > expiry:
-        cursor.close()
-        conn.close()
-        flash("ลิงก์รีเซ็ตรหัสผ่านไม่ถูกต้องหรือหมดอายุแล้ว กรุณาขอลิงก์ใหม่")
-        return redirect(url_for("forgot_password"))
-
-    if request.method == "POST":
-        new_password = request.form["password"]
-        confirm_password = request.form["confirm_password"]
-
-        if new_password != confirm_password:
-            cursor.close()
-            conn.close()
-            flash("รหัสผ่านทั้งสองช่องไม่ตรงกัน กรุณากรอกใหม่")
-            return redirect(url_for("reset_password", token=token))
-
-        hashed_password = generate_password_hash(new_password)
-        # ตั้งรหัสผ่านใหม่ และล้าง token ทันที เพื่อไม่ให้ลิงก์เดิมใช้ซ้ำได้อีก
-        cursor.execute(
-            "UPDATE User SET password=%s, reset_token=NULL, reset_token_expiry=NULL WHERE user_id=%s",
-            (hashed_password, user["user_id"]),
-        )
-        conn.commit()
-        cursor.close()
-        conn.close()
-
-        flash("ตั้งรหัสผ่านใหม่สำเร็จแล้ว กรุณาเข้าสู่ระบบด้วยรหัสผ่านใหม่")
-        return redirect(url_for("login"))
-
-    cursor.close()
-    conn.close()
-    return render_template("reset_password.html", token=token)
-
-
 # ---------- ทดสอบ Resend ----------
 # ใช้ชั่วคราวสำหรับตรวจสอบว่า Render -> Resend -> อีเมล ทำงานหรือไม่
 # ต้อง login ก่อน และระบบจะส่งไปยังอีเมลของบัญชีที่ login อยู่เท่านั้น
@@ -492,7 +384,7 @@ def test_email():
     conn = get_db()
     cursor = conn.cursor(dictionary=True)
     cursor.execute(
-        "SELECT email, name FROM User WHERE user_id = %s",
+        "SELECT email, name FROM users WHERE id = %s",
         (session["user_id"],)
     )
     user = cursor.fetchone()
@@ -827,18 +719,18 @@ def send_adoption_request(pet_id):
         )
         applicant_id = cursor.lastrowid
 
-        cursor.execute(
-                """SELECT id FROM adoption_requests
-                     WHERE pet_id = %s AND applicant_id = %s
-                     LIMIT 1""",
-                (pet_id, applicant_id),
-        )
-        if cursor.fetchone():
-                conn.rollback()
-                cursor.close()
-                conn.close()
-                flash("คุณเคยส่งคำขอรับเลี้ยงสัตว์ตัวนี้แล้ว")
-                return redirect(url_for("pet_detail", pet_id=pet_id))
+    cursor.execute(
+        """SELECT id FROM adoption_requests
+           WHERE pet_id = %s AND applicant_id = %s
+           LIMIT 1""",
+        (pet_id, applicant_id),
+    )
+    if cursor.fetchone():
+        conn.rollback()
+        cursor.close()
+        conn.close()
+        flash("คุณเคยส่งคำขอรับเลี้ยงสัตว์ตัวนี้แล้ว")
+        return redirect(url_for("pet_detail", pet_id=pet_id))
 
     experience_note = " | ".join(
         value for value in (
@@ -849,14 +741,21 @@ def send_adoption_request(pet_id):
         ) if value
     )
     contact_channel = " | ".join(value for value in (phone, email) if value)
-    cursor.execute(
-        """INSERT INTO adoption_requests
-           (pet_id, applicant_id, housing_type, housing_permission,
-            experience_note, contact_channel, message, status)
-           VALUES (%s, %s, %s, 1, %s, %s, %s, 'pending')""",
-        (pet_id, applicant_id, housing_type or "ไม่ระบุ", experience_note,
-         contact_channel, message),
-    )
+    try:
+        cursor.execute(
+            """INSERT INTO adoption_requests
+               (pet_id, applicant_id, housing_type, housing_permission,
+                experience_note, contact_channel, message, status)
+               VALUES (%s, %s, %s, 1, %s, %s, %s, 'pending')""",
+            (pet_id, applicant_id, housing_type or "ไม่ระบุ", experience_note,
+             contact_channel, message),
+        )
+    except IntegrityError:
+        conn.rollback()
+        cursor.close()
+        conn.close()
+        flash("คุณเคยส่งคำขอรับเลี้ยงสัตว์ตัวนี้แล้ว")
+        return redirect(url_for("pet_detail", pet_id=pet_id))
     conn.commit()
     cursor.close()
     conn.close()

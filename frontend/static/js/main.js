@@ -57,18 +57,21 @@ function setupImagePreview() {
    เช่น เช็คว่ากรอกอายุเป็นตัวเลขที่มากกว่าหรือเท่ากับ 0
 --------------------------------------------------------- */
 function setupPetFormValidation() {
-    const ageInput = document.querySelector('input[name="age"]');
-    if (!ageInput) {
+    const ageYearsInput = document.querySelector('input[name="age_years"]');
+    const ageMonthsInput = document.querySelector('input[name="age_months"]');
+    if (!ageYearsInput || !ageMonthsInput) {
         return;
     }
 
-    const form = ageInput.closest("form");
+    const form = ageYearsInput.closest("form");
     form.addEventListener("submit", function (event) {
-        const ageValue = Number(ageInput.value);
+        const ageYears = Number(ageYearsInput.value);
+        const ageMonths = Number(ageMonthsInput.value);
 
-        if (ageValue < 0) {
+        if (!Number.isInteger(ageYears) || ageYears < 0 || ageYears > 50 ||
+            !Number.isInteger(ageMonths) || ageMonths < 0 || ageMonths > 11) {
             event.preventDefault(); // หยุดการส่งฟอร์ม
-            alert("กรุณากรอกอายุที่ถูกต้อง (ต้องไม่ติดลบ)");
+            alert("กรุณากรอกอายุให้ถูกต้อง (ปี 0-50 และเดือน 0-11)");
         }
     });
 }
