@@ -18,7 +18,7 @@
       {% endif %}
     </div>
     {% if req.status == 'pending' and req.pet_status != 'adopted' %}
-    <div>
+    <div class="request-actions">
       <form method="POST" action="{{ url_for('approve_request', request_id=req.request_id) }}" class="d-inline">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit" class="btn btn-sm btn-success">อนุมัติ</button>

@@ -1,5 +1,39 @@
+# Environment variables and secrets
 .env
+.env.*
+
+# Python virtual environment
+.venv/
+venv/
+env/
+
+# Python cache and compiled files
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+
+# Test and tool caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Logs
+*.log
+
+# Node.js dependencies (not required by the Flask app)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# IDE and operating-system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Uploaded files
 frontend/static/uploads/*
 !frontend/static/uploads/.gitkeep

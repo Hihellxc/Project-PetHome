@@ -13,7 +13,8 @@ from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
 import secrets
 import mysql.connector
-from datetime import datetime, timedelta
+from mysql.connector.errors import IntegrityError
+from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_wtf.csrf import CSRFProtect
 from werkzeug.security import generate_password_hash, check_password_hash #แอดมินไม่เห็นรหัสของผู้ใช้
@@ -29,8 +30,11 @@ app = Flask(
     template_folder=os.path.join(FRONTEND_DIR, "templates"),
     static_folder=os.path.join(FRONTEND_DIR, "static"),
 )
-# ใช้ secret จาก environment; ถ้าไม่มีจะสร้างชั่วคราวสำหรับการรันเครื่อง local
-app.secret_key = os.environ.get("SECRET_KEY") or secrets.token_hex(32)
+# ใช้ secret จาก environment; local อนุญาตให้สร้างชั่วคราว แต่ production ต้องตั้งค่าเอง
+SECRET_KEY = os.environ.get("SECRET_KEY")
+if os.environ.get("FLASK_ENV") == "production" and not SECRET_KEY:
+    raise RuntimeError("ต้องตั้งค่า SECRET_KEY ก่อนรันใน production")
+app.secret_key = SECRET_KEY or secrets.token_hex(32)
 csrf = CSRFProtect(app)
 
 
@@ -72,6 +76,7 @@ UPLOAD_FOLDER = os.path.join(FRONTEND_DIR, "static", "uploads")
 ALLOWED_EXT = {"png", "jpg", "jpeg", "gif"} #อนุญาตให้อัปโหลดเฉพาะไฟล์รูป
 
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024
 
 # รายชื่อ 77 จังหวัดของไทย ใช้แสดงเป็นตัวเลือกในช่องกรอกจังหวัด (พิมพ์ค้นหาได้ผ่าน <datalist>)
 THAI_PROVINCES = [
@@ -120,6 +125,27 @@ def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXT
 
 
+def allowed_image_upload(image_file):
+    """ตรวจทั้งนามสกุลและ MIME type เบื้องต้นของไฟล์รูป"""
+    allowed_mime_types = {"image/png", "image/jpeg", "image/gif"}
+    return (
+        bool(image_file and image_file.filename)
+        and allowed_file(image_file.filename)
+        and image_file.mimetype in allowed_mime_types
+    )
+
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}, 200
+
+
+@app.errorhandler(413)
+def request_entity_too_large(error):
+    flash("ไฟล์รูปภาพต้องมีขนาดไม่เกิน 5 MB")
+    return redirect(request.referrer or url_for("home"))
+
+
 # ---------- ตั้งค่าสำหรับส่งอีเมลผ่าน Resend ----------
 # Render ไม่สามารถใช้ Gmail SMTP แบบเดิมได้ จึงเรียก Resend ผ่าน HTTPS API
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "").strip()
@@ -142,6 +168,26 @@ cloudinary.config(
     api_secret=os.environ.get("CLOUDINARY_API_SECRET"),
     secure=True,
 )
+
+
+def upload_image(image_file):
+    """อัปโหลดรูปไป Cloudinary หรือเก็บใน static/uploads ตอนรัน local"""
+    has_cloudinary_config = all(
+        os.environ.get(name)
+        for name in ("CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET")
+    )
+
+    if has_cloudinary_config:
+        try:
+            result = cloudinary.uploader.upload(image_file, folder="pethome")
+            return result["secure_url"]
+        except Exception as error:
+            print(f"อัปโหลดรูปไป Cloudinary ไม่สำเร็จ จะเก็บไฟล์ไว้ในเครื่องแทน: {error}")
+
+    extension = image_file.filename.rsplit(".", 1)[1].lower()
+    filename = f"{secrets.token_hex(16)}.{extension}"
+    image_file.save(os.path.join(UPLOAD_FOLDER, filename))
+    return url_for("static", filename=f"uploads/{filename}")
 
 def send_email(to_address, subject, body):
     """
@@ -229,6 +275,8 @@ def send_email(to_address, subject, body):
 def home():
     pet_type = request.args.get("type", "")
     province = request.args.get("province", "")
+    page = max(request.args.get("page", 1, type=int), 1)
+    per_page = 12
 
     conn = get_db()
     # ตรวจสอบว่า Render กำลังใช้ Database ตัวไหน
@@ -267,13 +315,25 @@ def home():
         query += " AND pets.province LIKE %s"
         params.append(f"%{province}%")
 
-    query += " ORDER BY pets.created_at DESC"
-    cursor.execute(query, params)
+    count_query = query.replace(
+        "SELECT pets.*, pets.id AS pet_id, pets.species AS type,\n               FLOOR(COALESCE(pets.age_months, 0) / 12) AS age_years,\n               MOD(COALESCE(pets.age_months, 0), 12) AS age_remainder,\n               COALESCE(pet_images.image_url, '') AS image",
+        "SELECT COUNT(DISTINCT pets.id)"
+    )
+    cursor.execute(count_query, params)
+    total_pets = cursor.fetchone()["COUNT(DISTINCT pets.id)"]
+    total_pages = max((total_pets + per_page - 1) // per_page, 1)
+    page = min(page, total_pages)
+
+    query += " ORDER BY pets.created_at DESC LIMIT %s OFFSET %s"
+    cursor.execute(query, params + [per_page, (page - 1) * per_page])
     pets = cursor.fetchall()
     cursor.close()
     conn.close()
 
-    return render_template("home.html", pets=pets, pet_type=pet_type, province=province, provinces=THAI_PROVINCES)
+    return render_template(
+        "home.html", pets=pets, pet_type=pet_type, province=province,
+        provinces=THAI_PROVINCES, page=page, total_pages=total_pages,
+    )
 
 
 # ---------- สมัครสมาชิก / เข้าสู่ระบบ / ออกจากระบบ ----------
@@ -340,115 +400,6 @@ def logout():
     return redirect(url_for("home"))
 
 
-# ---------- ขอรีเซ็ตรหัสผ่าน / ตั้งรหัสผ่านใหม่ ----------
-
-@app.route("/forgot_password", methods=["GET", "POST"])
-def forgot_password():
-    if request.method == "POST":
-        email = request.form["email"]
-
-        conn = get_db()
-        cursor = conn.cursor(dictionary=True)
-        print(f"[Forgot Password] request received | email={email!r}", flush=True)
-
-        cursor.execute("SELECT * FROM User WHERE email = %s", (email,))
-        user = cursor.fetchone()
-
-        print(
-            f"[Forgot Password] user found: {'YES' if user else 'NO'}",
-            flush=True
-        )
-
-        if user:
-            # สร้าง token แบบสุ่มที่คาดเดาไม่ได้ และตั้งอายุ 1 ชั่วโมง
-            token = secrets.token_urlsafe(32)
-            expiry = datetime.now() + timedelta(hours=1)
-            cursor.execute(
-                "UPDATE User SET reset_token=%s, reset_token_expiry=%s WHERE user_id=%s",
-                (token, expiry, user["user_id"]),
-            )
-            conn.commit()
-
-            reset_link = url_for("reset_password", token=token, _external=True)
-            body = (
-                f"สวัสดีคุณ {user['name']},\n\n"
-                f"มีการขอรีเซ็ตรหัสผ่านสำหรับบัญชี PetHome ของคุณ\n"
-                f"กดลิงก์นี้เพื่อตั้งรหัสผ่านใหม่ (ลิงก์จะหมดอายุใน 1 ชั่วโมง):\n\n"
-                f"{reset_link}\n\n"
-                f"ถ้าคุณไม่ได้ขอรีเซ็ตรหัสผ่าน สามารถละเลยอีเมลนี้ได้เลยค่ะ\n\n"
-                f"— PetHome"
-            )
-            print(
-                f"[Forgot Password] calling send_email() for {user['email']!r}",
-                flush=True
-            )
-            send_result = send_email(
-                user["email"],
-                "ขอรีเซ็ตรหัสผ่าน PetHome",
-                body
-            )
-            print(
-                f"[Forgot Password] send_email result: {send_result}",
-                flush=True
-            )
-
-        cursor.close()
-        conn.close()
-
-        # แสดงข้อความเดียวกันไม่ว่าจะเจออีเมลนี้ในระบบหรือไม่ ป้องกันการเดาว่าอีเมลไหนมีอยู่ในระบบบ้าง
-        flash("ถ้าอีเมลนี้มีอยู่ในระบบ เราได้ส่งลิงก์รีเซ็ตรหัสผ่านไปให้แล้ว กรุณาเช็คอีเมลของคุณ")
-        return redirect(url_for("login"))
-
-    return render_template("forgot_password.html")
-
-
-@app.route("/reset_password/<token>", methods=["GET", "POST"])
-def reset_password(token):
-    conn = get_db()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM User WHERE reset_token = %s", (token,))
-    user = cursor.fetchone()
-
-    # เช็คว่า token มีอยู่จริง และยังไม่หมดอายุ
-    # (กันไว้เผื่อ driver บางกรณีคืนค่าคอลัมน์ DATETIME มาเป็น string แทน datetime object)
-    expiry = user["reset_token_expiry"] if user else None
-    if isinstance(expiry, str):
-        expiry = datetime.fromisoformat(expiry)
-
-    if not user or expiry is None or datetime.now() > expiry:
-        cursor.close()
-        conn.close()
-        flash("ลิงก์รีเซ็ตรหัสผ่านไม่ถูกต้องหรือหมดอายุแล้ว กรุณาขอลิงก์ใหม่")
-        return redirect(url_for("forgot_password"))
-
-    if request.method == "POST":
-        new_password = request.form["password"]
-        confirm_password = request.form["confirm_password"]
-
-        if new_password != confirm_password:
-            cursor.close()
-            conn.close()
-            flash("รหัสผ่านทั้งสองช่องไม่ตรงกัน กรุณากรอกใหม่")
-            return redirect(url_for("reset_password", token=token))
-
-        hashed_password = generate_password_hash(new_password)
-        # ตั้งรหัสผ่านใหม่ และล้าง token ทันที เพื่อไม่ให้ลิงก์เดิมใช้ซ้ำได้อีก
-        cursor.execute(
-            "UPDATE User SET password=%s, reset_token=NULL, reset_token_expiry=NULL WHERE user_id=%s",
-            (hashed_password, user["user_id"]),
-        )
-        conn.commit()
-        cursor.close()
-        conn.close()
-
-        flash("ตั้งรหัสผ่านใหม่สำเร็จแล้ว กรุณาเข้าสู่ระบบด้วยรหัสผ่านใหม่")
-        return redirect(url_for("login"))
-
-    cursor.close()
-    conn.close()
-    return render_template("reset_password.html", token=token)
-
-
 # ---------- ทดสอบ Resend ----------
 # ใช้ชั่วคราวสำหรับตรวจสอบว่า Render -> Resend -> อีเมล ทำงานหรือไม่
 # ต้อง login ก่อน และระบบจะส่งไปยังอีเมลของบัญชีที่ login อยู่เท่านั้น
@@ -458,7 +409,7 @@ def test_email():
     conn = get_db()
     cursor = conn.cursor(dictionary=True)
     cursor.execute(
-        "SELECT email, name FROM User WHERE user_id = %s",
+        "SELECT email, name FROM users WHERE id = %s",
         (session["user_id"],)
     )
     user = cursor.fetchone()
@@ -545,20 +496,15 @@ def add_pet():
         image_file = request.files.get("image")
         image_filename = ""
         if image_file and image_file.filename:
-            if allowed_file(image_file.filename):
+            if allowed_image_upload(image_file):
                 try:
-                    result = cloudinary.uploader.upload(
-                    image_file,
-                    folder="pethome"
-                    )
-
-                    image_filename = result["secure_url"]
+                    image_filename = upload_image(image_file)
                 except Exception as e:
-                    print(f"อัปโหลดรูปไป Cloudinary ไม่สำเร็จ: {e}")
+                    print(f"บันทึกไฟล์รูปภาพไม่สำเร็จ: {e}")
                     image_filename = ""
                     flash("อัปโหลดรูปภาพไม่สำเร็จ แต่ข้อมูลอื่นถูกบันทึกแล้ว")
             else:
-                flash("ไฟล์รูปภาพต้องเป็นนามสกุล png, jpg, jpeg หรือ gif เท่านั้น (บันทึกประกาศโดยไม่มีรูป)")
+                flash("กรุณาเลือกไฟล์รูป PNG, JPG หรือ GIF ที่มีขนาดไม่เกิน 5 MB (บันทึกประกาศโดยไม่มีรูป)")
 
         conn = get_db()
         cursor = conn.cursor()
@@ -632,18 +578,14 @@ def edit_pet(pet_id):
         image_filename = pet["image"]
         image_file = request.files.get("image")
         if image_file and image_file.filename:
-            if allowed_file(image_file.filename):
+            if allowed_image_upload(image_file):
                 try:
-                    result = cloudinary.uploader.upload(
-                    image_file,
-                    folder="pethome"
-                    )
-                    image_filename = result["secure_url"]
+                    image_filename = upload_image(image_file)
                 except Exception as e:
-                    print(f"อัปโหลดรูปไป Cloudinary ไม่สำเร็จ: {e}")
+                    print(f"บันทึกไฟล์รูปภาพไม่สำเร็จ: {e}")
                     flash("บันทึกรูปภาพใหม่ไม่สำเร็จ ระบบใช้รูปเดิมไว้ก่อน")
             else:
-                flash("ไฟล์รูปภาพต้องเป็นนามสกุล png, jpg, jpeg หรือ gif เท่านั้น (ใช้รูปเดิมไว้ก่อน)")
+                flash("กรุณาเลือกไฟล์รูป PNG, JPG หรือ GIF ที่มีขนาดไม่เกิน 5 MB (ใช้รูปเดิมไว้ก่อน)")
 
         # หมายเหตุ: connection object ของ mysql.connector ไม่มีเมธอด .execute()
         # ต้องสั่งผ่าน cursor เท่านั้น (ใช้ cursor ตัวเดิมที่เปิดไว้ด้านบนได้เลย)
@@ -747,28 +689,42 @@ def pet_detail(pet_id):
 
 @app.route("/pet/<int:pet_id>/adopt", methods=["POST"])
 def send_adoption_request(pet_id):
-    user_name = request.form["user_name"]
-    phone = request.form["phone"]
-    email = request.form.get("email", "")
+    user_name = request.form.get("user_name", "").strip()
+    phone = request.form.get("phone", "").strip()
+    email = request.form.get("email", "").strip().lower()
     province = request.form.get("province", "")
     occupation = request.form.get("occupation", "")
     pet_experience = request.form.get("pet_experience", "")
     housing_type = request.form.get("housing_type", "")
     household_info = request.form.get("household_info", "")
-    message = request.form["message"]
+    message = request.form.get("message", "").strip()
 
     conn = get_db()
 
     # ดึงชื่อสัตว์ + ชื่อและอีเมลของเจ้าไว้ก่อน จะได้เอาไปใช้ส่งอีเมลแจ้งเตือน
     info_cursor = conn.cursor(dictionary=True)
     info_cursor.execute(
-          """SELECT pets.name AS pet_name, users.name AS owner_name, users.email AS owner_email
+          """SELECT pets.name AS pet_name, pets.status, pets.user_id AS owner_id,
+                    users.name AS owner_name, users.email AS owner_email
               FROM pets JOIN users ON pets.user_id = users.id
               WHERE pets.id = %s""",
         (pet_id,),
     )
     pet_owner = info_cursor.fetchone()
     info_cursor.close()
+
+    if not pet_owner:
+        conn.close()
+        flash("ไม่พบประกาศสัตว์นี้")
+        return redirect(url_for("home"))
+    if pet_owner["status"] != "available":
+        conn.close()
+        flash("สัตว์ตัวนี้มีผู้รับเลี้ยงแล้วหรือไม่เปิดรับคำขอ")
+        return redirect(url_for("pet_detail", pet_id=pet_id))
+    if pet_owner["owner_id"] == session.get("user_id"):
+        conn.close()
+        flash("ไม่สามารถส่งคำขอรับเลี้ยงประกาศของตัวเองได้")
+        return redirect(url_for("pet_detail", pet_id=pet_id))
 
     cursor = conn.cursor()
     applicant_email = email or f"guest-{secrets.token_hex(8)}@pethome.local"
@@ -788,6 +744,19 @@ def send_adoption_request(pet_id):
         )
         applicant_id = cursor.lastrowid
 
+    cursor.execute(
+        """SELECT id FROM adoption_requests
+           WHERE pet_id = %s AND applicant_id = %s
+           LIMIT 1""",
+        (pet_id, applicant_id),
+    )
+    if cursor.fetchone():
+        conn.rollback()
+        cursor.close()
+        conn.close()
+        flash("คุณเคยส่งคำขอรับเลี้ยงสัตว์ตัวนี้แล้ว")
+        return redirect(url_for("pet_detail", pet_id=pet_id))
+
     experience_note = " | ".join(
         value for value in (
             f"อาชีพ: {occupation}" if occupation else "",
@@ -797,14 +766,21 @@ def send_adoption_request(pet_id):
         ) if value
     )
     contact_channel = " | ".join(value for value in (phone, email) if value)
-    cursor.execute(
-        """INSERT INTO adoption_requests
-           (pet_id, applicant_id, housing_type, housing_permission,
-            experience_note, contact_channel, message, status)
-           VALUES (%s, %s, %s, 1, %s, %s, %s, 'pending')""",
-        (pet_id, applicant_id, housing_type or "ไม่ระบุ", experience_note,
-         contact_channel, message),
-    )
+    try:
+        cursor.execute(
+            """INSERT INTO adoption_requests
+               (pet_id, applicant_id, housing_type, housing_permission,
+                experience_note, contact_channel, message, status)
+               VALUES (%s, %s, %s, 1, %s, %s, %s, 'pending')""",
+            (pet_id, applicant_id, housing_type or "ไม่ระบุ", experience_note,
+             contact_channel, message),
+        )
+    except IntegrityError:
+        conn.rollback()
+        cursor.close()
+        conn.close()
+        flash("คุณเคยส่งคำขอรับเลี้ยงสัตว์ตัวนี้แล้ว")
+        return redirect(url_for("pet_detail", pet_id=pet_id))
     conn.commit()
     cursor.close()
     conn.close()
@@ -879,17 +855,22 @@ def approve_request(request_id):
     cursor = conn.cursor(dictionary=True)
     # หา request และเช็คว่าสัตว์นี้เป็นของ user ที่ login อยู่จริง
     cursor.execute(
-        """SELECT adoption_requests.*, adoption_requests.id AS request_id,
+            """SELECT adoption_requests.*, adoption_requests.id AS request_id,
                 pets.user_id AS owner_id, pets.status AS pet_status,
-                pets.id AS pet_id
-           FROM adoption_requests JOIN pets ON adoption_requests.pet_id = pets.id
+                 pets.id AS pet_id, pets.name AS pet_name,
+                 users.name AS applicant_name, users.email AS applicant_email
+             FROM adoption_requests
+             JOIN pets ON adoption_requests.pet_id = pets.id
+             JOIN users ON adoption_requests.applicant_id = users.id
            WHERE adoption_requests.id = %s""",
         (request_id,),
     )
     req = cursor.fetchone()
 
     if req and req["owner_id"] == session["user_id"]:
-        if req["pet_status"] == "adopted":
+        if req["status"] != "pending":
+            flash("คำขอนี้ได้รับการจัดการไปแล้ว")
+        elif req["pet_status"] == "adopted":
             flash("สัตว์ตัวนี้มีผู้ได้รับอนุมัติไปแล้ว ไม่สามารถอนุมัติคำขออื่นซ้ำได้")
         else:
             cursor.execute("UPDATE adoption_requests SET status='approved' WHERE id=%s", (request_id,))
@@ -900,6 +881,16 @@ def approve_request(request_id):
                 (req["pet_id"], request_id),
             )
             conn.commit()
+            flash("อนุมัติคำขอสำเร็จ")
+
+            if req.get("applicant_email") and not req["applicant_email"].endswith("@pethome.local"):
+                send_email(
+                    req["applicant_email"],
+                    f"ผลการขอรับเลี้ยง {req['pet_name']}",
+                    f"สวัสดีคุณ {req['applicant_name']},\n\n"
+                    f"คำขอรับเลี้ยง \"{req['pet_name']}\" ของคุณได้รับการอนุมัติแล้วครับ\n\n"
+                    "— PetHome",
+                )
 
     cursor.close()
     conn.close()
