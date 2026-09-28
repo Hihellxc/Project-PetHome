@@ -10,7 +10,7 @@
 
     <div class="col-md-6">
       <label class="form-label">ชื่อสัตว์</label>
-      <input type="text" name="name" class="form-control" required>
+      <input type="text" name="name" class="form-control" minlength="2" maxlength="100" required>
     </div>
 
     <div class="col-md-6">
@@ -27,6 +27,12 @@
     </div>
 
     <div class="col-md-4">
+      <label class="form-label" for="breed">พันธุ์</label>
+            <input type="text" id="breed" name="breed" class="form-control" maxlength="100"
+              placeholder="เช่น ไทย, โกลเด้นรีทรีฟเวอร์ (ถ้าไม่ทราบให้เว้นว่าง)">
+    </div>
+
+    <div class="col-md-4">
       <label class="form-label">เพศ</label>
       <select name="gender" class="form-select" required>
         <option value="ผู้">ผู้</option>
@@ -36,23 +42,45 @@
 
     <div class="col-md-4">
       <label class="form-label">อายุ (ปี)</label>
-      <input type="number" name="age" class="form-control" min="0" required>
+      <input type="number" name="age_years" class="form-control" min="0" required>
+    </div>
+
+    <div class="col-md-4">
+      <label class="form-label">อายุ (เดือน)</label>
+      <input type="number" name="age_months" class="form-control" min="0" max="11" required>
+    </div>
+
+    <div class="col-12">
+      <div class="form-check form-check-inline">
+        <input class="form-check-input" type="checkbox" id="sterilization_status" name="sterilization_status">
+        <label class="form-check-label" for="sterilization_status">ทำหมันแล้ว</label>
+      </div>
+      <div class="form-check form-check-inline">
+        <input class="form-check-input" type="checkbox" id="vaccinated" name="vaccinated">
+        <label class="form-check-label" for="vaccinated">ฉีดวัคซีนแล้ว</label>
+      </div>
     </div>
 
     <div class="col-md-6">
       <label class="form-label">จังหวัด</label>
-      <input type="text" name="province" class="form-control" list="provinceList"
-             placeholder="พิมพ์เพื่อค้นหาจังหวัด" autocomplete="off" required>
-      <datalist id="provinceList"> <!--ช่อง input นี้จะใช้รายการตัวเลือกจาก provinceList-->
+      <select name="province" class="form-select" required>
+        <option value="" selected disabled>-- เลือกจังหวัด --</option>
         {% for p in provinces %}
-          <option value="{{ p }}">
+          <option value="{{ p }}">{{ p }}</option>
         {% endfor %}
-      </datalist>
+      </select>
     </div>
 
     <div class="col-12">
       <label class="form-label">รายละเอียด</label>
-      <textarea name="description" class="form-control" rows="4"></textarea>
+      <textarea name="description" class="form-control" rows="4" minlength="10" maxlength="2000" required></textarea>
+    </div>
+
+    <div class="col-12">
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" id="confirm_info" name="confirm_info" required>
+        <label class="form-check-label" for="confirm_info">ยืนยันว่าข้อมูลสัตว์ที่กรอกเป็นความจริง</label>
+      </div>
     </div>
 
     <div class="col-12">

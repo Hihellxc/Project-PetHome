@@ -111,6 +111,8 @@
         <h5 class="card-title mb-2">{{ pet.name }}</h5>
         <div class="mb-3">
           <span class="pet-tag">{{ '🐶' if pet.type == 'หมา' else '🐱' }} {{ pet.type }}</span>
+          <span class="pet-tag">พันธุ์: {{ pet.breed or 'ไม่ทราบ' }}</span>
+          <span class="pet-tag">อายุ: {{ pet.age_years }} ปี{% if pet.age_remainder %} {{ pet.age_remainder }} เดือน{% endif %}</span>
           <span class="pet-tag">📍 {{ pet.province }}</span>
         </div>
         <a href="{{ url_for('pet_detail', pet_id=pet.pet_id) }}"
