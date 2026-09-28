@@ -762,9 +762,9 @@ def send_adoption_request(pet_id):
     # ดึงชื่อสัตว์ + ชื่อและอีเมลของเจ้าไว้ก่อน จะได้เอาไปใช้ส่งอีเมลแจ้งเตือน
     info_cursor = conn.cursor(dictionary=True)
     info_cursor.execute(
-        """SELECT Pet.name AS pet_name, User.name AS owner_name, User.email AS owner_email
-           FROM Pet JOIN User ON Pet.owner_id = User.user_id
-           WHERE Pet.pet_id = %s""",
+          """SELECT pets.name AS pet_name, users.name AS owner_name, users.email AS owner_email
+              FROM pets JOIN users ON pets.user_id = users.id
+              WHERE pets.id = %s""",
         (pet_id,),
     )
     pet_owner = info_cursor.fetchone()
@@ -899,6 +899,7 @@ def approve_request(request_id):
                    WHERE pet_id=%s AND status='pending' AND id != %s""",
                 (req["pet_id"], request_id),
             )
+            conn.commit()
 
     cursor.close()
     conn.close()
@@ -911,8 +912,11 @@ def reject_request(request_id):
     conn = get_db()
     cursor = conn.cursor(dictionary=True)
     cursor.execute(
-          """SELECT adoption_requests.*, pets.user_id AS owner_id
-              FROM adoption_requests JOIN pets ON adoption_requests.pet_id = pets.id
+            """SELECT adoption_requests.*, pets.user_id AS owner_id,
+                  pets.name AS pet_name, users.name AS user_name, users.email AS email
+              FROM adoption_requests
+              JOIN pets ON adoption_requests.pet_id = pets.id
+              JOIN users ON adoption_requests.applicant_id = users.id
               WHERE adoption_requests.id = %s""",
         (request_id,),
     )
