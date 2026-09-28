@@ -500,17 +500,43 @@ def test_email():
 @login_required
 def add_pet():
     if request.method == "POST":
-        name = request.form["name"]
-        pet_type = request.form["type"]
+        name = request.form.get("name", "").strip()
+        pet_type = request.form.get("type", "")
         breed = request.form.get("breed", "").strip() or None
-        gender = {"ผู้": "male", "เมีย": "female"}.get(request.form["gender"], "unknown")
-        age_years = int(request.form["age_years"])
-        age_months = int(request.form["age_months"])
+        gender_value = request.form.get("gender", "")
+        province = request.form.get("province", "").strip()
+        description = request.form.get("description", "").strip()
+
+        try:
+            age_years = int(request.form.get("age_years", "-1"))
+            age_months = int(request.form.get("age_months", "-1"))
+        except ValueError:
+            flash("กรุณากรอกอายุเป็นตัวเลขเท่านั้น")
+            return render_template("add_pet.html", provinces=THAI_PROVINCES)
+
+        if not 2 <= len(name) <= 100:
+            flash("ชื่อสัตว์ต้องมีความยาว 2-100 ตัวอักษร")
+            return render_template("add_pet.html", provinces=THAI_PROVINCES)
+        if pet_type not in {"หมา", "แมว"} or gender_value not in {"ผู้", "เมีย"}:
+            flash("กรุณาเลือกประเภทและเพศสัตว์ให้ถูกต้อง")
+            return render_template("add_pet.html", provinces=THAI_PROVINCES)
+        if age_years < 0 or age_years > 50 or not 0 <= age_months <= 11:
+            flash("กรุณากรอกอายุให้ถูกต้อง (ไม่เกิน 50 ปี และเดือนต้องอยู่ระหว่าง 0-11)")
+            return render_template("add_pet.html", provinces=THAI_PROVINCES)
+        if province not in THAI_PROVINCES:
+            flash("กรุณาเลือกจังหวัดจากรายการที่กำหนด")
+            return render_template("add_pet.html", provinces=THAI_PROVINCES)
+        if len(description) < 10 or len(description) > 2000:
+            flash("รายละเอียดต้องมีความยาว 10-2,000 ตัวอักษร")
+            return render_template("add_pet.html", provinces=THAI_PROVINCES)
+        if request.form.get("confirm_info") != "on":
+            flash("กรุณายืนยันว่าข้อมูลสัตว์เป็นความจริงก่อนบันทึก")
+            return render_template("add_pet.html", provinces=THAI_PROVINCES)
+
+        gender = {"ผู้": "male", "เมีย": "female"}[gender_value]
         age = age_years * 12 + age_months
-        province = request.form["province"]
         sterilization_status = 1 if request.form.get("sterilization_status") else 0
         vaccinated = 1 if request.form.get("vaccinated") else 0
-        description = request.form["description"]
 
         # จัดการไฟล์รูปภาพ
         # หมายเหตุ: ถ้าการบันทึกรูปเกิดปัญหา (เช่น โฟลเดอร์หาย, ไฟล์เสีย)

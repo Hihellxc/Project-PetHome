@@ -33,7 +33,7 @@
       <td>{{ pet.name }}</td>
       <td>{{ pet.type }}</td>
       <td>{{ pet.breed or 'ไม่ระบุ' }}</td>
-      <td>{{ pet.age_years }} ปี {{ pet.age_remainder }} เดือน</td>
+      <td>{{ pet.age_years }} ปี{% if pet.age_remainder %} {{ pet.age_remainder }} เดือน{% endif %}</td>
       <td>{{ pet.province }}</td>
       <td>
         {% if pet.status == 'available' %}

@@ -24,7 +24,7 @@
         <li class="list-group-item bg-transparent">ประเภท: {{ pet.type }}</li>
         <li class="list-group-item bg-transparent">พันธุ์: {{ pet.breed or 'ไม่ระบุ' }}</li>
         <li class="list-group-item bg-transparent">เพศ: {{ pet.gender }}</li>
-        <li class="list-group-item bg-transparent">อายุ: {{ pet.age_years }} ปี {{ pet.age_remainder }} เดือน</li>
+        <li class="list-group-item bg-transparent">อายุ: {{ pet.age_years }} ปี{% if pet.age_remainder %} {{ pet.age_remainder }} เดือน{% endif %}</li>
         <li class="list-group-item bg-transparent">จังหวัด: {{ pet.province }}</li>
         <li class="list-group-item bg-transparent">ทำหมัน: {{ 'ทำหมันแล้ว' if pet.sterilization_status else 'ยังไม่ได้ทำหมัน' }}</li>
         <li class="list-group-item bg-transparent">วัคซีน: {{ 'ฉีดวัคซีนแล้ว' if pet.vaccinated else 'ยังไม่ได้ฉีดวัคซีน' }}</li>
