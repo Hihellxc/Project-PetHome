@@ -501,9 +501,12 @@ def add_pet():
     if request.method == "POST":
         name = request.form["name"]
         pet_type = request.form["type"]
+        breed = request.form.get("breed", "").strip() or None
         gender = {"ผู้": "male", "เมีย": "female"}.get(request.form["gender"], "unknown")
         age = int(request.form["age"]) * 12
         province = request.form["province"]
+        sterilization_status = 1 if request.form.get("sterilization_status") else 0
+        vaccinated = 1 if request.form.get("vaccinated") else 0
         description = request.form["description"]
 
         # จัดการไฟล์รูปภาพ
@@ -531,14 +534,14 @@ def add_pet():
         conn = get_db()
         cursor = conn.cursor()
         cursor.execute(
-            """INSERT INTO pets (user_id, name, species, gender, age_months, province,
-               description, status, created_at)
-               VALUES (%s, %s, %s, %s, %s, %s, %s, 'available', %s)""",
+            """INSERT INTO pets (user_id, name, species, breed, gender, age_months, province,
+               sterilization_status, vaccinated, description, status, created_at)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'available', %s)""",
             # หมายเหตุ: ส่ง datetime.now() เป็น object ตรงๆ แทนการแปลงเป็น string ด้วย isoformat()
             # เพราะ isoformat() คั่นวันที่กับเวลาด้วยตัว "T" (เช่น 2026-01-01T12:00:00)
             # ซึ่งคอลัมน์ประเภท DATETIME ของ MySQL ไม่รับรูปแบบนี้โดยตรง ต้องให้ driver แปลงให้เอง
-            (session["user_id"], name, pet_type, gender, age, province,
-             description, datetime.now()),
+            (session["user_id"], name, pet_type, breed, gender, age, province,
+             sterilization_status, vaccinated, description, datetime.now()),
         )
         pet_id = cursor.lastrowid
         if image_filename:
@@ -583,9 +586,12 @@ def edit_pet(pet_id):
     if request.method == "POST":
         name = request.form["name"]
         pet_type = request.form["type"]
+        breed = request.form.get("breed", "").strip() or None
         gender = {"ผู้": "male", "เมีย": "female"}.get(request.form["gender"], "unknown")
         age = int(request.form["age"]) * 12
         province = request.form["province"]
+        sterilization_status = 1 if request.form.get("sterilization_status") else 0
+        vaccinated = 1 if request.form.get("vaccinated") else 0
         description = request.form["description"]
         status = {"Available": "available", "Adopted": "adopted"}.get(
             request.form["status"], "available"
@@ -610,10 +616,11 @@ def edit_pet(pet_id):
         # หมายเหตุ: connection object ของ mysql.connector ไม่มีเมธอด .execute()
         # ต้องสั่งผ่าน cursor เท่านั้น (ใช้ cursor ตัวเดิมที่เปิดไว้ด้านบนได้เลย)
         cursor.execute(
-            """UPDATE pets SET name=%s, species=%s, gender=%s, age_months=%s,
-               province=%s, description=%s, status=%s WHERE id=%s""",
-            (name, pet_type, gender, age, province, description,
-             status, pet_id),
+            """UPDATE pets SET name=%s, species=%s, breed=%s, gender=%s, age_months=%s,
+               province=%s, sterilization_status=%s, vaccinated=%s, description=%s,
+               status=%s WHERE id=%s""",
+            (name, pet_type, breed, gender, age, province, sterilization_status,
+             vaccinated, description, status, pet_id),
         )
         if image_filename and image_filename != pet["image"]:
             cursor.execute("DELETE FROM pet_images WHERE pet_id = %s", (pet_id,))
