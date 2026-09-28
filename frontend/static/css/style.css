@@ -419,6 +419,7 @@ textarea:focus-visible,
   transition: transform 0.12s ease, box-shadow 0.12s ease;
 }
 .btn:active { transform: translateY(1px) scale(0.98); }
+.btn.is-submitting { opacity: 0.7; cursor: wait; }
 
 .btn-primary {
   background: var(--sky-500);

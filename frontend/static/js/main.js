@@ -91,6 +91,24 @@ function autoHideAlerts() {
 }
 
 
+/* ป้องกันการกดส่งฟอร์มซ้ำระหว่างรอ server ตอบกลับ */
+function preventDuplicateSubmit() {
+    document.querySelectorAll("form").forEach(function (form) {
+        form.addEventListener("submit", function () {
+            if (form.dataset.submitting === "true") {
+                return;
+            }
+
+            form.dataset.submitting = "true";
+            form.querySelectorAll('button[type="submit"]').forEach(function (button) {
+                button.disabled = true;
+                button.classList.add("is-submitting");
+            });
+        });
+    });
+}
+
+
 /* ---------------------------------------------------------
    เมื่อโหลดหน้าเว็บเสร็จ ให้เรียกใช้ฟังก์ชันทั้งหมดข้างบน
 --------------------------------------------------------- */
@@ -98,4 +116,5 @@ document.addEventListener("DOMContentLoaded", function () {
     setupImagePreview();
     setupPetFormValidation();
     autoHideAlerts();
+    preventDuplicateSubmit();
 });
