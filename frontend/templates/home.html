@@ -134,4 +134,22 @@
   {% endfor %}
 </div>
 
+{% if total_pages > 1 %}
+<nav class="mt-2 mb-4" aria-label="เปลี่ยนหน้ารายการสัตว์">
+  <ul class="pagination justify-content-center">
+    <li class="page-item {% if page == 1 %}disabled{% endif %}">
+      <a class="page-link" href="{{ url_for('home', type=pet_type, province=province, page=page - 1) }}" aria-label="หน้าก่อนหน้า">ก่อนหน้า</a>
+    </li>
+    {% for page_number in range(1, total_pages + 1) %}
+      <li class="page-item {% if page_number == page %}active{% endif %}">
+        <a class="page-link" href="{{ url_for('home', type=pet_type, province=province, page=page_number) }}">{{ page_number }}</a>
+      </li>
+    {% endfor %}
+    <li class="page-item {% if page == total_pages %}disabled{% endif %}">
+      <a class="page-link" href="{{ url_for('home', type=pet_type, province=province, page=page + 1) }}" aria-label="หน้าถัดไป">ถัดไป</a>
+    </li>
+  </ul>
+</nav>
+{% endif %}
+
 {% endblock %}
