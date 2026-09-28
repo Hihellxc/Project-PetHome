@@ -143,6 +143,26 @@ cloudinary.config(
     secure=True,
 )
 
+
+def upload_image(image_file):
+    """อัปโหลดรูปไป Cloudinary หรือเก็บใน static/uploads ตอนรัน local"""
+    has_cloudinary_config = all(
+        os.environ.get(name)
+        for name in ("CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET")
+    )
+
+    if has_cloudinary_config:
+        try:
+            result = cloudinary.uploader.upload(image_file, folder="pethome")
+            return result["secure_url"]
+        except Exception as error:
+            print(f"อัปโหลดรูปไป Cloudinary ไม่สำเร็จ จะเก็บไฟล์ไว้ในเครื่องแทน: {error}")
+
+    extension = image_file.filename.rsplit(".", 1)[1].lower()
+    filename = f"{secrets.token_hex(16)}.{extension}"
+    image_file.save(os.path.join(UPLOAD_FOLDER, filename))
+    return url_for("static", filename=f"uploads/{filename}")
+
 def send_email(to_address, subject, body):
     """
     ส่งอีเมลผ่าน Resend Email API ผ่าน HTTPS
@@ -561,14 +581,9 @@ def add_pet():
         if image_file and image_file.filename:
             if allowed_file(image_file.filename):
                 try:
-                    result = cloudinary.uploader.upload(
-                    image_file,
-                    folder="pethome"
-                    )
-
-                    image_filename = result["secure_url"]
+                    image_filename = upload_image(image_file)
                 except Exception as e:
-                    print(f"อัปโหลดรูปไป Cloudinary ไม่สำเร็จ: {e}")
+                    print(f"บันทึกไฟล์รูปภาพไม่สำเร็จ: {e}")
                     image_filename = ""
                     flash("อัปโหลดรูปภาพไม่สำเร็จ แต่ข้อมูลอื่นถูกบันทึกแล้ว")
             else:
@@ -648,13 +663,9 @@ def edit_pet(pet_id):
         if image_file and image_file.filename:
             if allowed_file(image_file.filename):
                 try:
-                    result = cloudinary.uploader.upload(
-                    image_file,
-                    folder="pethome"
-                    )
-                    image_filename = result["secure_url"]
+                    image_filename = upload_image(image_file)
                 except Exception as e:
-                    print(f"อัปโหลดรูปไป Cloudinary ไม่สำเร็จ: {e}")
+                    print(f"บันทึกไฟล์รูปภาพไม่สำเร็จ: {e}")
                     flash("บันทึกรูปภาพใหม่ไม่สำเร็จ ระบบใช้รูปเดิมไว้ก่อน")
             else:
                 flash("ไฟล์รูปภาพต้องเป็นนามสกุล png, jpg, jpeg หรือ gif เท่านั้น (ใช้รูปเดิมไว้ก่อน)")
