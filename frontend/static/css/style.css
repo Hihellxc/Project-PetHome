@@ -270,9 +270,11 @@ textarea:focus-visible,
 .pet-image-wrap { position: relative; }
 
 .pet-image {
-  height: 200px;
+  aspect-ratio: 4 / 3;
+  height: auto;
   object-fit: cover;
   width: 100%;
+  background: var(--sky-100);
 }
 
 .pet-sticker {
@@ -298,7 +300,12 @@ textarea:focus-visible,
   border: 2px solid var(--sky-200);
 }
 
-.pet-card .card-body { padding: 18px; }
+.pet-card .card-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 238px;
+  padding: 20px;
+}
 
 .pet-card .card-title {
   color: var(--navy-700);
@@ -317,6 +324,86 @@ textarea:focus-visible,
   font-weight: 600;
   margin-right: 4px;
   margin-bottom: 4px;
+}
+
+.pet-card-meta {
+  min-height: 104px;
+}
+
+.pet-card-button {
+  width: 100%;
+}
+
+.pet-detail-image {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border: 2px solid var(--sky-200);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
+  background: var(--sky-100);
+}
+
+.pet-detail-panel {
+  padding: 28px;
+}
+
+.pet-detail-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 18px;
+  margin-bottom: 18px;
+  border-bottom: 2px solid var(--sky-200);
+}
+
+.pet-eyebrow {
+  margin: 0 0 4px;
+  color: var(--sky-600);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.pet-detail-title {
+  font-size: 2rem;
+}
+
+.pet-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 0;
+  list-style: none;
+}
+
+.pet-facts li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 11px 13px;
+  background: var(--sky-100);
+  border: 1px solid var(--sky-200);
+  border-radius: var(--radius-sm);
+}
+
+.pet-facts li > span {
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.pet-facts li > strong {
+  color: var(--navy-700);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.pet-facts .pet-fact-wide {
+  grid-column: 1 / -1;
 }
 
 /* ---------- ปุ่ม (แบบ pill น่ารัก) ---------- */
@@ -553,6 +640,18 @@ textarea:focus-visible,
   }
 
   .form-panel { padding: 24px 20px; }
+
+  .pet-detail-panel { padding: 24px 20px; }
+
+  .pet-detail-heading {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .pet-detail-title { font-size: 1.7rem; }
+
+  .pet-facts { grid-template-columns: 1fr; }
+  .pet-facts .pet-fact-wide { grid-column: auto; }
 
   .table-pethome {
     display: block;

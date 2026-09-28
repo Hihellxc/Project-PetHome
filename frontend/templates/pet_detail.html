@@ -5,31 +5,35 @@
 <div class="row g-4">
   <div class="col-md-6">
     {% if pet.image %}
-      <img src="{{ pet.image }}" class="img-fluid rounded" style="border-radius: 20px; box-shadow: var(--shadow-card); width:100%; object-fit:cover; max-height:420px;">
+      <img src="{{ pet.image }}" class="pet-detail-image" alt="{{ pet.name }}">
     {% else %}
-      <img src="https://via.placeholder.com/500x350/eaf5ff/3d8bfd?text=PetHome" class="img-fluid" style="border-radius: 20px; width:100%;">
+      <img src="https://via.placeholder.com/500x350/eaf5ff/3d8bfd?text=PetHome" class="pet-detail-image" alt="ไม่มีรูป {{ pet.name }}">
     {% endif %}
   </div>
 
   <div class="col-md-6">
-    <div class="form-panel h-100">
-      <h2>{{ pet.name }}
+    <div class="form-panel pet-detail-panel h-100">
+      <div class="pet-detail-heading">
+        <div>
+          <p class="pet-eyebrow">ข้อมูลน้องสัตว์เลี้ยง</p>
+          <h2 class="pet-detail-title mb-0">{{ pet.name }}</h2>
+        </div>
         {% if pet.status == 'adopted' %}
           <span class="badge badge-adopted">🏡 มีบ้านแล้ว</span>
         {% else %}
           <span class="badge badge-available">✨ พร้อมหาบ้าน</span>
         {% endif %}
-      </h2>
-      <ul class="list-group list-group-flush mb-2">
-        <li class="list-group-item bg-transparent">ประเภท: {{ pet.type }}</li>
-        <li class="list-group-item bg-transparent">พันธุ์: {{ pet.breed or 'ไม่ทราบ' }}</li>
-        <li class="list-group-item bg-transparent">เพศ: {{ pet.gender }}</li>
-        <li class="list-group-item bg-transparent">อายุ: {{ pet.age_years }} ปี{% if pet.age_remainder %} {{ pet.age_remainder }} เดือน{% endif %}</li>
-        <li class="list-group-item bg-transparent">จังหวัด: {{ pet.province }}</li>
-        <li class="list-group-item bg-transparent">ทำหมัน: {{ 'ทำหมันแล้ว' if pet.sterilization_status else 'ยังไม่ได้ทำหมัน' }}</li>
-        <li class="list-group-item bg-transparent">วัคซีน: {{ 'ฉีดวัคซีนแล้ว' if pet.vaccinated else 'ยังไม่ได้ฉีดวัคซีน' }}</li>
-        <li class="list-group-item bg-transparent">รายละเอียด: {{ pet.description }}</li>
-        <li class="list-group-item bg-transparent">เจ้าของ: {{ pet.owner_name }}</li>
+      </div>
+      <ul class="pet-facts mb-0">
+        <li><span>ประเภท</span><strong>{{ pet.type }}</strong></li>
+        <li><span>พันธุ์</span><strong>{{ pet.breed or 'ไม่ทราบ' }}</strong></li>
+        <li><span>เพศ</span><strong>{{ 'ผู้' if pet.gender == 'male' else 'เมีย' if pet.gender == 'female' else 'ไม่ระบุ' }}</strong></li>
+        <li><span>อายุ</span><strong>{{ pet.age_years }} ปี{% if pet.age_remainder %} {{ pet.age_remainder }} เดือน{% endif %}</strong></li>
+        <li><span>จังหวัด</span><strong>📍 {{ pet.province }}</strong></li>
+        <li><span>ทำหมัน</span><strong>{{ 'ทำหมันแล้ว' if pet.sterilization_status else 'ยังไม่ได้ทำหมัน' }}</strong></li>
+        <li><span>วัคซีน</span><strong>{{ 'ฉีดวัคซีนแล้ว' if pet.vaccinated else 'ยังไม่ได้ฉีดวัคซีน' }}</strong></li>
+        <li><span>เจ้าของ</span><strong>{{ pet.owner_name }}</strong></li>
+        <li class="pet-fact-wide"><span>รายละเอียด</span><strong>{{ pet.description }}</strong></li>
       </ul>
     </div>
   </div>
