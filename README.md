@@ -83,10 +83,9 @@ python -m backend.app
    - ผู้ขอได้อีเมลแจ้งผลทันทีที่เจ้าของกดอนุมัติ/ปฏิเสธ
 
 ## Database Schema
-3 ตาราง: **User** (user_id, name, email, password), **Pet** (pet_id, owner_id, name, type,
-gender, age, province, description, image, status, created_at), **Adoption** (request_id,
-pet_id, user_name, phone, email, province, occupation, pet_experience, housing_type,
-household_info, message, status, created_at)
+ฐานข้อมูลหลักอยู่ใน `database/schema.sql` ประกอบด้วยตาราง `users`, `pets`, `pet_images`,
+`adoption_requests` และ `admin_audit_logs` โดยคำขอรับเลี้ยงหนึ่งคนต่อสัตว์หนึ่งตัวจะส่งซ้ำไม่ได้
+ถ้ามีฐานข้อมูลเดิม ให้รัน migration ใน `database/migrations/001_adoption_request_indexes.sql` หลังตรวจสอบคำขอซ้ำ
 
 ## หมายเหตุเกี่ยวกับโค้ด
 - โค้ดฝั่ง Backend (`app.py`) เขียนแบบฟังก์ชันตรงไปตรงมา ไม่ใช้ ORM ที่ซับซ้อน ใช้ `mysql.connector`
@@ -102,7 +101,7 @@ household_info, message, status, created_at)
   (ข้ามการส่งไปเงียบๆ แค่ print log แจ้งไว้)
 
 ## แนวทางต่อยอด (ถ้าต้องการพัฒนาเพิ่ม)
-- เพิ่ม pagination ในหน้า Home
+- หน้า Home มี pagination และคงค่าตัวกรองประเภท/จังหวัดระหว่างเปลี่ยนหน้า
 - เพิ่มระบบ Admin กลางสำหรับจัดการทั้งระบบ
 - ย้ายรูปที่อัปโหลดไปเก็บบน cloud storage (เช่น Cloudinary) เพื่อไม่ให้หายตอน redeploy
 - เพิ่มการอัปโหลดรูปได้หลายรูปต่อประกาศ
