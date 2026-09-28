@@ -250,7 +250,8 @@ def home():
 
     query = """
         SELECT pets.*, pets.id AS pet_id, pets.species AS type,
-               ROUND(pets.age_months / 12, 1) AS age,
+               FLOOR(COALESCE(pets.age_months, 0) / 12) AS age_years,
+               MOD(COALESCE(pets.age_months, 0), 12) AS age_remainder,
                COALESCE(pet_images.image_url, '') AS image
         FROM pets
         LEFT JOIN pet_images ON pet_images.pet_id = pets.id AND pet_images.is_primary = 1
@@ -503,7 +504,9 @@ def add_pet():
         pet_type = request.form["type"]
         breed = request.form.get("breed", "").strip() or None
         gender = {"ผู้": "male", "เมีย": "female"}.get(request.form["gender"], "unknown")
-        age = int(request.form["age"]) * 12
+        age_years = int(request.form["age_years"])
+        age_months = int(request.form["age_months"])
+        age = age_years * 12 + age_months
         province = request.form["province"]
         sterilization_status = 1 if request.form.get("sterilization_status") else 0
         vaccinated = 1 if request.form.get("vaccinated") else 0
@@ -566,7 +569,8 @@ def edit_pet(pet_id):
     cursor = conn.cursor(dictionary=True)
     cursor.execute(
         """SELECT pets.*, pets.id AS pet_id, pets.species AS type,
-                  ROUND(pets.age_months / 12, 1) AS age,
+                  FLOOR(COALESCE(pets.age_months, 0) / 12) AS age_years,
+                  MOD(COALESCE(pets.age_months, 0), 12) AS age_remainder,
                   COALESCE(pet_images.image_url, '') AS image,
                   pets.user_id AS owner_id
            FROM pets
@@ -588,7 +592,9 @@ def edit_pet(pet_id):
         pet_type = request.form["type"]
         breed = request.form.get("breed", "").strip() or None
         gender = {"ผู้": "male", "เมีย": "female"}.get(request.form["gender"], "unknown")
-        age = int(request.form["age"]) * 12
+        age_years = int(request.form["age_years"])
+        age_months = int(request.form["age_months"])
+        age = age_years * 12 + age_months
         province = request.form["province"]
         sterilization_status = 1 if request.form.get("sterilization_status") else 0
         vaccinated = 1 if request.form.get("vaccinated") else 0
@@ -668,7 +674,8 @@ def my_pets():
     cursor = conn.cursor(dictionary=True)
     cursor.execute(
         """SELECT pets.*, pets.id AS pet_id, pets.species AS type,
-              ROUND(pets.age_months / 12, 1) AS age,
+              FLOOR(COALESCE(pets.age_months, 0) / 12) AS age_years,
+              MOD(COALESCE(pets.age_months, 0), 12) AS age_remainder,
               COALESCE(pet_images.image_url, '') AS image
            FROM pets
            LEFT JOIN pet_images ON pet_images.pet_id = pets.id AND pet_images.is_primary = 1
@@ -689,7 +696,8 @@ def pet_detail(pet_id):
     cursor = conn.cursor(dictionary=True)
     cursor.execute(
          """SELECT pets.*, pets.id AS pet_id, pets.species AS type,
-                ROUND(pets.age_months / 12, 1) AS age,
+                FLOOR(COALESCE(pets.age_months, 0) / 12) AS age_years,
+                MOD(COALESCE(pets.age_months, 0), 12) AS age_remainder,
                 COALESCE(pet_images.image_url, '') AS image,
                 users.name AS owner_name, users.email AS owner_email
             FROM pets
