@@ -250,7 +250,8 @@ def home():
 
     query = """
         SELECT pets.*, pets.id AS pet_id, pets.species AS type,
-               ROUND(pets.age_months / 12, 1) AS age,
+               FLOOR(COALESCE(pets.age_months, 0) / 12) AS age_years,
+               MOD(COALESCE(pets.age_months, 0), 12) AS age_remainder,
                COALESCE(pet_images.image_url, '') AS image
         FROM pets
         LEFT JOIN pet_images ON pet_images.pet_id = pets.id AND pet_images.is_primary = 1
@@ -499,12 +500,43 @@ def test_email():
 @login_required
 def add_pet():
     if request.method == "POST":
-        name = request.form["name"]
-        pet_type = request.form["type"]
-        gender = {"ผู้": "male", "เมีย": "female"}.get(request.form["gender"], "unknown")
-        age = int(request.form["age"]) * 12
-        province = request.form["province"]
-        description = request.form["description"]
+        name = request.form.get("name", "").strip()
+        pet_type = request.form.get("type", "")
+        breed = request.form.get("breed", "").strip() or "ไม่ทราบ"
+        gender_value = request.form.get("gender", "")
+        province = request.form.get("province", "").strip()
+        description = request.form.get("description", "").strip()
+
+        try:
+            age_years = int(request.form.get("age_years", "-1"))
+            age_months = int(request.form.get("age_months", "-1"))
+        except ValueError:
+            flash("กรุณากรอกอายุเป็นตัวเลขเท่านั้น")
+            return render_template("add_pet.html", provinces=THAI_PROVINCES)
+
+        if not 2 <= len(name) <= 100:
+            flash("ชื่อสัตว์ต้องมีความยาว 2-100 ตัวอักษร")
+            return render_template("add_pet.html", provinces=THAI_PROVINCES)
+        if pet_type not in {"หมา", "แมว"} or gender_value not in {"ผู้", "เมีย"}:
+            flash("กรุณาเลือกประเภทและเพศสัตว์ให้ถูกต้อง")
+            return render_template("add_pet.html", provinces=THAI_PROVINCES)
+        if age_years < 0 or age_years > 50 or not 0 <= age_months <= 11:
+            flash("กรุณากรอกอายุให้ถูกต้อง (ไม่เกิน 50 ปี และเดือนต้องอยู่ระหว่าง 0-11)")
+            return render_template("add_pet.html", provinces=THAI_PROVINCES)
+        if province not in THAI_PROVINCES:
+            flash("กรุณาเลือกจังหวัดจากรายการที่กำหนด")
+            return render_template("add_pet.html", provinces=THAI_PROVINCES)
+        if len(description) < 10 or len(description) > 2000:
+            flash("รายละเอียดต้องมีความยาว 10-2,000 ตัวอักษร")
+            return render_template("add_pet.html", provinces=THAI_PROVINCES)
+        if request.form.get("confirm_info") != "on":
+            flash("กรุณายืนยันว่าข้อมูลสัตว์เป็นความจริงก่อนบันทึก")
+            return render_template("add_pet.html", provinces=THAI_PROVINCES)
+
+        gender = {"ผู้": "male", "เมีย": "female"}[gender_value]
+        age = age_years * 12 + age_months
+        sterilization_status = 1 if request.form.get("sterilization_status") else 0
+        vaccinated = 1 if request.form.get("vaccinated") else 0
 
         # จัดการไฟล์รูปภาพ
         # หมายเหตุ: ถ้าการบันทึกรูปเกิดปัญหา (เช่น โฟลเดอร์หาย, ไฟล์เสีย)
@@ -531,14 +563,14 @@ def add_pet():
         conn = get_db()
         cursor = conn.cursor()
         cursor.execute(
-            """INSERT INTO pets (user_id, name, species, gender, age_months, province,
-               description, status, created_at)
-               VALUES (%s, %s, %s, %s, %s, %s, %s, 'available', %s)""",
+            """INSERT INTO pets (user_id, name, species, breed, gender, age_months, province,
+               sterilization_status, vaccinated, description, status, created_at)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'available', %s)""",
             # หมายเหตุ: ส่ง datetime.now() เป็น object ตรงๆ แทนการแปลงเป็น string ด้วย isoformat()
             # เพราะ isoformat() คั่นวันที่กับเวลาด้วยตัว "T" (เช่น 2026-01-01T12:00:00)
             # ซึ่งคอลัมน์ประเภท DATETIME ของ MySQL ไม่รับรูปแบบนี้โดยตรง ต้องให้ driver แปลงให้เอง
-            (session["user_id"], name, pet_type, gender, age, province,
-             description, datetime.now()),
+            (session["user_id"], name, pet_type, breed, gender, age, province,
+             sterilization_status, vaccinated, description, datetime.now()),
         )
         pet_id = cursor.lastrowid
         if image_filename:
@@ -563,7 +595,8 @@ def edit_pet(pet_id):
     cursor = conn.cursor(dictionary=True)
     cursor.execute(
         """SELECT pets.*, pets.id AS pet_id, pets.species AS type,
-                  ROUND(pets.age_months / 12, 1) AS age,
+                  FLOOR(COALESCE(pets.age_months, 0) / 12) AS age_years,
+                  MOD(COALESCE(pets.age_months, 0), 12) AS age_remainder,
                   COALESCE(pet_images.image_url, '') AS image,
                   pets.user_id AS owner_id
            FROM pets
@@ -583,9 +616,14 @@ def edit_pet(pet_id):
     if request.method == "POST":
         name = request.form["name"]
         pet_type = request.form["type"]
+        breed = request.form.get("breed", "").strip() or "ไม่ทราบ"
         gender = {"ผู้": "male", "เมีย": "female"}.get(request.form["gender"], "unknown")
-        age = int(request.form["age"]) * 12
+        age_years = int(request.form["age_years"])
+        age_months = int(request.form["age_months"])
+        age = age_years * 12 + age_months
         province = request.form["province"]
+        sterilization_status = 1 if request.form.get("sterilization_status") else 0
+        vaccinated = 1 if request.form.get("vaccinated") else 0
         description = request.form["description"]
         status = {"Available": "available", "Adopted": "adopted"}.get(
             request.form["status"], "available"
@@ -610,10 +648,11 @@ def edit_pet(pet_id):
         # หมายเหตุ: connection object ของ mysql.connector ไม่มีเมธอด .execute()
         # ต้องสั่งผ่าน cursor เท่านั้น (ใช้ cursor ตัวเดิมที่เปิดไว้ด้านบนได้เลย)
         cursor.execute(
-            """UPDATE pets SET name=%s, species=%s, gender=%s, age_months=%s,
-               province=%s, description=%s, status=%s WHERE id=%s""",
-            (name, pet_type, gender, age, province, description,
-             status, pet_id),
+            """UPDATE pets SET name=%s, species=%s, breed=%s, gender=%s, age_months=%s,
+               province=%s, sterilization_status=%s, vaccinated=%s, description=%s,
+               status=%s WHERE id=%s""",
+            (name, pet_type, breed, gender, age, province, sterilization_status,
+             vaccinated, description, status, pet_id),
         )
         if image_filename and image_filename != pet["image"]:
             cursor.execute("DELETE FROM pet_images WHERE pet_id = %s", (pet_id,))
@@ -661,7 +700,8 @@ def my_pets():
     cursor = conn.cursor(dictionary=True)
     cursor.execute(
         """SELECT pets.*, pets.id AS pet_id, pets.species AS type,
-              ROUND(pets.age_months / 12, 1) AS age,
+              FLOOR(COALESCE(pets.age_months, 0) / 12) AS age_years,
+              MOD(COALESCE(pets.age_months, 0), 12) AS age_remainder,
               COALESCE(pet_images.image_url, '') AS image
            FROM pets
            LEFT JOIN pet_images ON pet_images.pet_id = pets.id AND pet_images.is_primary = 1
@@ -682,7 +722,8 @@ def pet_detail(pet_id):
     cursor = conn.cursor(dictionary=True)
     cursor.execute(
          """SELECT pets.*, pets.id AS pet_id, pets.species AS type,
-                ROUND(pets.age_months / 12, 1) AS age,
+                FLOOR(COALESCE(pets.age_months, 0) / 12) AS age_years,
+                MOD(COALESCE(pets.age_months, 0), 12) AS age_remainder,
                 COALESCE(pet_images.image_url, '') AS image,
                 users.name AS owner_name, users.email AS owner_email
             FROM pets
@@ -721,9 +762,9 @@ def send_adoption_request(pet_id):
     # ดึงชื่อสัตว์ + ชื่อและอีเมลของเจ้าไว้ก่อน จะได้เอาไปใช้ส่งอีเมลแจ้งเตือน
     info_cursor = conn.cursor(dictionary=True)
     info_cursor.execute(
-        """SELECT Pet.name AS pet_name, User.name AS owner_name, User.email AS owner_email
-           FROM Pet JOIN User ON Pet.owner_id = User.user_id
-           WHERE Pet.pet_id = %s""",
+          """SELECT pets.name AS pet_name, users.name AS owner_name, users.email AS owner_email
+              FROM pets JOIN users ON pets.user_id = users.id
+              WHERE pets.id = %s""",
         (pet_id,),
     )
     pet_owner = info_cursor.fetchone()
@@ -858,6 +899,7 @@ def approve_request(request_id):
                    WHERE pet_id=%s AND status='pending' AND id != %s""",
                 (req["pet_id"], request_id),
             )
+            conn.commit()
 
     cursor.close()
     conn.close()
@@ -870,8 +912,11 @@ def reject_request(request_id):
     conn = get_db()
     cursor = conn.cursor(dictionary=True)
     cursor.execute(
-          """SELECT adoption_requests.*, pets.user_id AS owner_id
-              FROM adoption_requests JOIN pets ON adoption_requests.pet_id = pets.id
+            """SELECT adoption_requests.*, pets.user_id AS owner_id,
+                  pets.name AS pet_name, users.name AS user_name, users.email AS email
+              FROM adoption_requests
+              JOIN pets ON adoption_requests.pet_id = pets.id
+              JOIN users ON adoption_requests.applicant_id = users.id
               WHERE adoption_requests.id = %s""",
         (request_id,),
     )

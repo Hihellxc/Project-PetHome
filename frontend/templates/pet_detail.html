@@ -22,9 +22,12 @@
       </h2>
       <ul class="list-group list-group-flush mb-2">
         <li class="list-group-item bg-transparent">ประเภท: {{ pet.type }}</li>
+        <li class="list-group-item bg-transparent">พันธุ์: {{ pet.breed or 'ไม่ทราบ' }}</li>
         <li class="list-group-item bg-transparent">เพศ: {{ pet.gender }}</li>
-        <li class="list-group-item bg-transparent">อายุ: {{ pet.age }} ปี</li>
+        <li class="list-group-item bg-transparent">อายุ: {{ pet.age_years }} ปี{% if pet.age_remainder %} {{ pet.age_remainder }} เดือน{% endif %}</li>
         <li class="list-group-item bg-transparent">จังหวัด: {{ pet.province }}</li>
+        <li class="list-group-item bg-transparent">ทำหมัน: {{ 'ทำหมันแล้ว' if pet.sterilization_status else 'ยังไม่ได้ทำหมัน' }}</li>
+        <li class="list-group-item bg-transparent">วัคซีน: {{ 'ฉีดวัคซีนแล้ว' if pet.vaccinated else 'ยังไม่ได้ฉีดวัคซีน' }}</li>
         <li class="list-group-item bg-transparent">รายละเอียด: {{ pet.description }}</li>
         <li class="list-group-item bg-transparent">เจ้าของ: {{ pet.owner_name }}</li>
       </ul>
@@ -64,14 +67,12 @@
 
         <div class="col-md-6">
           <label class="form-label">จังหวัดที่พักอาศัย</label>
-          <!-- ใช้ input + datalist: พิมพ์ค้นหาได้ และเลือกจากรายชื่อจังหวัดทั้งหมดได้ -->
-          <input type="text" name="province" class="form-control" list="provinceList"
-                 placeholder="พิมพ์เพื่อค้นหาจังหวัด" autocomplete="off">
-          <datalist id="provinceList">
+          <select name="province" class="form-select">
+            <option value="">-- ไม่ระบุ --</option>
             {% for p in provinces %}
-              <option value="{{ p }}">
+              <option value="{{ p }}">{{ p }}</option>
             {% endfor %}
-          </datalist>
+          </select>
         </div>
 
         <div class="col-md-6">

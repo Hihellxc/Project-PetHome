@@ -13,6 +13,8 @@
       <th>รูป</th>
       <th>ชื่อ</th>
       <th>ประเภท</th>
+      <th>พันธุ์</th>
+      <th>อายุ</th>
       <th>จังหวัด</th>
       <th>สถานะ</th>
       <th>จัดการ</th>
@@ -30,6 +32,8 @@
       </td>
       <td>{{ pet.name }}</td>
       <td>{{ pet.type }}</td>
+      <td>{{ pet.breed or 'ไม่ทราบ' }}</td>
+      <td>{{ pet.age_years }} ปี{% if pet.age_remainder %} {{ pet.age_remainder }} เดือน{% endif %}</td>
       <td>{{ pet.province }}</td>
       <td>
         {% if pet.status == 'available' %}
@@ -50,7 +54,7 @@
     </tr>
     {% else %}
     <tr>
-      <td colspan="6" class="p-0">
+      <td colspan="8" class="p-0">
         <div class="empty-state">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
             <path d="M12 3l7 4v5c0 5-3 8-7 9-4-1-7-4-7-9V7l7-4z"/>
