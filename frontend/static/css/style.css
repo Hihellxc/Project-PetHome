@@ -37,7 +37,13 @@
 }
 
 /* ---------- พื้นฐาน ---------- */
-html, body { height: 100%; }
+html {
+  height: 100%;
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
+}
+
+body { height: 100%; }
 
 body {
   background-color: var(--sky-100);
@@ -138,6 +144,29 @@ textarea:focus-visible,
   padding: 8px 16px !important;
   margin: 0 2px;
   transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+.navbar-pethome .navbar-nav {
+  align-items: center;
+  gap: 4px;
+}
+
+.navbar-pethome .nav-item,
+.navbar-pethome .navbar-logout {
+  display: flex;
+  align-items: center;
+}
+
+.navbar-pethome .nav-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  white-space: nowrap;
+}
+
+.navbar-pethome .navbar-logout .nav-link {
+  width: 100%;
 }
 
 .navbar-pethome .nav-link:hover {
@@ -295,6 +324,11 @@ textarea:focus-visible,
   border-radius: var(--radius-pill) !important;
   font-weight: 600;
   padding: 9px 20px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
   transition: transform 0.12s ease, box-shadow 0.12s ease;
 }
 .btn:active { transform: translateY(1px) scale(0.98); }
@@ -353,7 +387,25 @@ textarea:focus-visible,
 }
 .btn-danger:hover { background: #f5789f; border-color: #f5789f; }
 
-.btn-sm { padding: 6px 14px; font-size: 0.85rem; }
+.btn-sm { min-height: 36px; padding: 6px 14px; font-size: 0.85rem; }
+
+.form-actions,
+.table-actions,
+.request-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.table-actions form,
+.request-actions form {
+  margin: 0;
+}
+
+.table-actions .btn {
+  min-width: 58px;
+}
 
 /* ---------- ฟอร์ม ---------- */
 .form-panel {
@@ -479,4 +531,32 @@ textarea:focus-visible,
   .hero-pethome { padding: 34px 24px; text-align: center; justify-content: center; }
   .hero-mascot { display: none; }
   .search-panel { margin-top: 0; }
+
+  .navbar-pethome .navbar-nav {
+    align-items: stretch;
+    gap: 2px;
+    padding-top: 8px;
+  }
+
+  .navbar-pethome .nav-item,
+  .navbar-pethome .navbar-logout {
+    width: 100%;
+  }
+
+  .navbar-pethome .nav-link {
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .navbar-pethome .user-greet {
+    justify-content: flex-start;
+  }
+
+  .form-panel { padding: 24px 20px; }
+
+  .table-pethome {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
 }
