@@ -15,7 +15,7 @@
       <svg viewBox="0 0 24 24"><path d="M12 14.5c-2.9 0-6 2.1-6 4.6 0 1 .8 1.9 1.9 1.9.9 0 1.6-.4 2.4-.8.6-.3 1.2-.6 1.7-.6s1.1.3 1.7.6c.8.4 1.5.8 2.4.8 1.1 0 1.9-.9 1.9-1.9 0-2.5-3.1-4.6-6-4.6zM6.5 11c1.1 0 2-1.1 2-2.5S7.6 6 6.5 6 4.5 7.1 4.5 8.5 5.4 11 6.5 11zm11 0c1.1 0 2-1.1 2-2.5S18.6 6 17.5 6s-2 1.1-2 2.5 .9 2.5 2 2.5zM9.2 8c1.1 0 2-1.2 2-2.7S10.3 2.6 9.2 2.6s-2 1.2-2 2.7.9 2.7 2 2.7zm5.6 0c1.1 0 2-1.2 2-2.7S15.9 2.6 14.8 2.6s-2 1.2-2 2.7.9 2.7 2 2.7z" fill="white"/></svg>
       <svg viewBox="0 0 24 24"><path d="M12 14.5c-2.9 0-6 2.1-6 4.6 0 1 .8 1.9 1.9 1.9.9 0 1.6-.4 2.4-.8.6-.3 1.2-.6 1.7-.6s1.1.3 1.7.6c.8.4 1.5.8 2.4.8 1.1 0 1.9-.9 1.9-1.9 0-2.5-3.1-4.6-6-4.6zM6.5 11c1.1 0 2-1.1 2-2.5S7.6 6 6.5 6 4.5 7.1 4.5 8.5 5.4 11 6.5 11zm11 0c1.1 0 2-1.1 2-2.5S18.6 6 17.5 6s-2 1.1-2 2.5 .9 2.5 2 2.5zM9.2 8c1.1 0 2-1.2 2-2.7S10.3 2.6 9.2 2.6s-2 1.2-2 2.7.9 2.7 2 2.7zm5.6 0c1.1 0 2-1.2 2-2.7S15.9 2.6 14.8 2.6s-2 1.2-2 2.7.9 2.7 2 2.7z" fill="white"/></svg>
     </div>
-    <h1>หาบ้านใหม่ให้น้องหมา น้องแมว 🐾</h1>
+    <h1>หาบ้านใหม่ให้น้องหมา น้องแมว</h1>
     <p>รวมประกาศสัตว์เลี้ยงที่กำลังมองหาเจ้าของใหม่ทั่วประเทศไทย เลือกดู ทำความรู้จัก แล้วส่งคำขอรับเลี้ยงได้ทันที ใช้งานง่าย</p>
   </div>
 
@@ -65,8 +65,13 @@
 
 <!-- ฟอร์มค้นหา -->
 <div class="search-panel">
-  <form method="GET" action="{{ url_for('home') }}" class="row g-2 align-items-end">
+  <form method="GET" action="{{ url_for('home') }}">
+    <div class="row g-2 align-items-end">
     <div class="col-md-4">
+      <label class="form-label mb-1">ค้นหา</label>
+      <input type="search" name="keyword" class="form-control" placeholder="ชื่อ พันธุ์ หรือรายละเอียด" value="{{ keyword }}">
+    </div>
+    <div class="col-md-3">
       <label class="form-label mb-1">ประเภทสัตว์</label>
       <select name="type" class="form-select">
         <option value="">ทั้งหมด</option>
@@ -74,21 +79,53 @@
         <option value="แมว" {% if pet_type == 'แมว' %}selected{% endif %}>แมว</option>
       </select>
     </div>
-    <div class="col-md-4">
+    <div class="col-md-2">
       <label class="form-label mb-1">จังหวัด</label>
-      <input type="text" name="province" class="form-control" placeholder="พิมพ์เพื่อค้นหาจังหวัด"
-             list="provinceList" autocomplete="off" value="{{ province }}">
-      <datalist id="provinceList">
+      <select name="province" class="form-select">
+        <option value="">ทุกจังหวัด</option>
         {% for p in provinces %}
-          <option value="{{ p }}">
+          <option value="{{ p }}" {% if province == p %}selected{% endif %}>{{ p }}</option>
         {% endfor %}
-      </datalist>
+      </select>
     </div>
     <div class="col-md-2">
-      <button type="submit" class="btn btn-primary w-100">🔍 ค้นหา</button>
+      <button type="submit" class="btn btn-primary w-100">ค้นหา</button>
     </div>
-    <div class="col-md-2">
+    <div class="col-md-1">
       <a href="{{ url_for('home') }}" class="btn btn-outline-secondary w-100">ล้างค่า</a>
+    </div>
+    </div>
+    <div class="mt-3">
+      <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#advancedFilters" aria-expanded="{{ 'true' if breed or gender or age_min is not none or age_max is not none or sterilized or vaccinated else 'false' }}" aria-controls="advancedFilters">ตัวกรองเพิ่มเติม</button>
+    </div>
+    <div class="collapse {% if breed or gender or age_min is not none or age_max is not none or sterilized or vaccinated %}show{% endif %} mt-3" id="advancedFilters">
+      <div class="row g-2 align-items-end advanced-filters">
+        <div class="col-md-3">
+          <label class="form-label mb-1">พันธุ์</label>
+          <input type="text" name="breed" class="form-control" placeholder="เช่น ไทย" value="{{ breed }}">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label mb-1">เพศ</label>
+          <select name="gender" class="form-select">
+            <option value="">ทุกเพศ</option>
+            <option value="unknown" {% if gender == 'unknown' %}selected{% endif %}>ไม่ระบุ</option>
+            <option value="male" {% if gender == 'male' %}selected{% endif %}>ผู้</option>
+            <option value="female" {% if gender == 'female' %}selected{% endif %}>เมีย</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label mb-1">อายุเริ่มต้น (ปี)</label>
+          <input type="number" name="age_min" class="form-control" min="0" value="{{ age_min if age_min is not none else '' }}">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label mb-1">อายุไม่เกิน (ปี)</label>
+          <input type="number" name="age_max" class="form-control" min="0" value="{{ age_max if age_max is not none else '' }}">
+        </div>
+        <div class="col-md-2 d-flex gap-3 align-items-center pb-2">
+          <div class="form-check"><input class="form-check-input" type="checkbox" name="sterilized" value="1" id="sterilized" {% if sterilized %}checked{% endif %}><label class="form-check-label" for="sterilized">ทำหมัน</label></div>
+          <div class="form-check"><input class="form-check-input" type="checkbox" name="vaccinated" value="1" id="vaccinated" {% if vaccinated %}checked{% endif %}><label class="form-check-label" for="vaccinated">วัคซีน</label></div>
+        </div>
+      </div>
     </div>
   </form>
 </div>
@@ -105,15 +142,15 @@
           <img src="https://via.placeholder.com/300x200/eaf5ff/45a6f5?text=PetHome"
                class="pet-image" alt="no image">
         {% endif %}
-        <span class="pet-sticker available">✨ พร้อมหาบ้าน</span>
+        <span class="pet-sticker available">พร้อมหาบ้าน</span>
       </div>
       <div class="card-body d-flex flex-column">
-        <h5 class="card-title mb-2">{{ pet.name }}</h5>
+          <h5 class="card-title mb-2">{{ pet.name }}</h5>
         <div class="pet-card-meta mb-3">
-          <span class="pet-tag">{{ '🐶' if pet.type == 'หมา' else '🐱' }} {{ pet.type }}</span>
+          <span class="pet-tag">{{ pet.type }}</span>
           <span class="pet-tag">พันธุ์: {{ pet.breed or 'ไม่ทราบ' }}</span>
           <span class="pet-tag">อายุ: {{ pet.age_years }} ปี{% if pet.age_remainder %} {{ pet.age_remainder }} เดือน{% endif %}</span>
-          <span class="pet-tag">📍 {{ pet.province }}</span>
+          <span class="pet-tag">{{ pet.province }}</span>
         </div>
         <a href="{{ url_for('pet_detail', pet_id=pet.pet_id) }}"
            class="btn btn-primary pet-card-button mt-auto">ดูรายละเอียด</a>
@@ -129,7 +166,7 @@
         <circle cx="14.5" cy="11.5" r="0.6" fill="currentColor"/>
         <path d="M7 6l1.5 2.5M17 6l-1.5 2.5" stroke-linecap="round"/>
       </svg>
-      <p>ยังไม่มีประกาศสัตว์ในขณะนี้ ลองกลับมาดูใหม่อีกครั้งนะ 🐾</p>
+      <p>ยังไม่มีประกาศสัตว์ในขณะนี้</p>
     </div>
   {% endfor %}
 </div>
@@ -138,15 +175,15 @@
 <nav class="mt-2 mb-4" aria-label="เปลี่ยนหน้ารายการสัตว์">
   <ul class="pagination justify-content-center">
     <li class="page-item {% if page == 1 %}disabled{% endif %}">
-      <a class="page-link" href="{{ url_for('home', type=pet_type, province=province, page=page - 1) }}" aria-label="หน้าก่อนหน้า">ก่อนหน้า</a>
+      <a class="page-link" href="{{ url_for('home', type=pet_type, province=province, keyword=keyword, breed=breed, gender=gender, age_min=age_min, age_max=age_max, sterilized='1' if sterilized else '', vaccinated='1' if vaccinated else '', page=page - 1) }}" aria-label="หน้าก่อนหน้า">ก่อนหน้า</a>
     </li>
     {% for page_number in range(1, total_pages + 1) %}
       <li class="page-item {% if page_number == page %}active{% endif %}">
-        <a class="page-link" href="{{ url_for('home', type=pet_type, province=province, page=page_number) }}">{{ page_number }}</a>
+        <a class="page-link" href="{{ url_for('home', type=pet_type, province=province, keyword=keyword, breed=breed, gender=gender, age_min=age_min, age_max=age_max, sterilized='1' if sterilized else '', vaccinated='1' if vaccinated else '', page=page_number) }}">{{ page_number }}</a>
       </li>
     {% endfor %}
     <li class="page-item {% if page == total_pages %}disabled{% endif %}">
-      <a class="page-link" href="{{ url_for('home', type=pet_type, province=province, page=page + 1) }}" aria-label="หน้าถัดไป">ถัดไป</a>
+      <a class="page-link" href="{{ url_for('home', type=pet_type, province=province, keyword=keyword, breed=breed, gender=gender, age_min=age_min, age_max=age_max, sterilized='1' if sterilized else '', vaccinated='1' if vaccinated else '', page=page + 1) }}" aria-label="หน้าถัดไป">ถัดไป</a>
     </li>
   </ul>
 </nav>

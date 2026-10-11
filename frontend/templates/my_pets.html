@@ -2,25 +2,26 @@
 {% block title %}ประกาศของฉัน - PetHome{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <h2 class="mb-0">📋 ประกาศของฉัน</h2>
+<div class="page-heading">
+  <h2 class="page-title">ประกาศของฉัน</h2>
   <a href="{{ url_for('add_pet') }}" class="btn btn-primary">+ เพิ่มประกาศใหม่</a>
 </div>
 
-<table class="table table-pethome align-middle">
-  <thead>
-    <tr>
-      <th>รูป</th>
-      <th>ชื่อ</th>
-      <th>ประเภท</th>
-      <th>พันธุ์</th>
-      <th>อายุ</th>
-      <th>จังหวัด</th>
-      <th>สถานะ</th>
-      <th>จัดการ</th>
-    </tr>
-  </thead>
-  <tbody>
+<div class="table-responsive pet-table-wrap">
+  <table class="table table-pethome align-middle mb-0">
+    <thead>
+      <tr>
+        <th>รูป</th>
+        <th>ชื่อ</th>
+        <th>ประเภท</th>
+        <th>พันธุ์</th>
+        <th>อายุ</th>
+        <th>จังหวัด</th>
+        <th>สถานะ</th>
+        <th>จัดการ</th>
+      </tr>
+    </thead>
+    <tbody>
     {% for pet in pets %}
     <tr>
       <td style="width:100px">
@@ -38,18 +39,24 @@
       <td>
         {% if pet.status == 'available' %}
           <span class="badge badge-available">Available</span>
+        {% elif pet.status == 'pending' %}
+          <span class="badge badge-pending">รอตรวจสอบ</span>
+        {% elif pet.status == 'rejected' %}
+          <span class="badge badge-rejected">ไม่ผ่านการตรวจสอบ</span>
         {% else %}
           <span class="badge badge-adopted">Adopted</span>
         {% endif %}
       </td>
-      <td class="table-actions">
-        <a href="{{ url_for('pet_detail', pet_id=pet.pet_id) }}" class="btn btn-sm btn-outline-primary">ดู</a>
-        <a href="{{ url_for('edit_pet', pet_id=pet.pet_id) }}" class="btn btn-sm btn-outline-warning">แก้ไข</a>
-        <form method="POST" action="{{ url_for('delete_pet', pet_id=pet.pet_id) }}" class="d-inline"
-              onsubmit="return confirmDelete()">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button type="submit" class="btn btn-sm btn-outline-danger">ลบ</button>
-        </form>
+      <td class="pet-actions">
+        <div class="pet-actions-inner">
+          <a href="{{ url_for('pet_detail', pet_id=pet.pet_id) }}" class="btn btn-sm btn-outline-primary">ดู</a>
+          <a href="{{ url_for('edit_pet', pet_id=pet.pet_id) }}" class="btn btn-sm btn-outline-warning">แก้ไข</a>
+          <form method="POST" action="{{ url_for('delete_pet', pet_id=pet.pet_id) }}" class="d-inline"
+                onsubmit="return confirmDelete()">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-sm btn-outline-danger">ลบ</button>
+          </form>
+        </div>
       </td>
     </tr>
     {% else %}
@@ -65,6 +72,7 @@
       </td>
     </tr>
     {% endfor %}
-  </tbody>
-</table>
+    </tbody>
+  </table>
+</div>
 {% endblock %}
