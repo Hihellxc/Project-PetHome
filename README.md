@@ -38,13 +38,13 @@ mysql -u root -p < database/schema.sql
 ### 2. ตั้งค่าการเชื่อมต่อฐานข้อมูล
 เปิด `backend/app.py` แก้ค่า `DB_CONFIG` หรือตั้งเป็น environment variable ก็ได้ (แนะนำ):
 
-**Windows PowerShell:**
-```powershell
-$env:MYSQLHOST="localhost"
-$env:MYSQLPORT="3306"
-$env:MYSQLUSER="root"
-$env:MYSQLPASSWORD="รหัสผ่าน MySQL ของคุณ"
-$env:MYSQLDATABASE="pethome"
+สร้างไฟล์ `.env` ไว้ที่ root ของโปรเจกต์
+```bash
+MYSQLHOST="localhost"
+MYSQLPORT="3306"
+MYSQLUSER="root"
+MYSQLPASSWORD="รหัสผ่าน MySQL ของคุณ"
+MYSQLDATABASE="pethome"
 ```
 
 ### 3. (ทางเลือก) ตั้งค่าให้ส่งอีเมลแจ้งเตือนได้
