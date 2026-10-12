@@ -65,6 +65,20 @@ h1, h2, h3, h4, .navbar-brand, .brand-font {
 h1, h2, h3, h4 { color: var(--navy-700); font-weight: 700; }
 h2 { font-size: 1.7rem; }
 
+.page-heading {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.page-title {
+  margin: 0;
+  line-height: 1.25;
+}
+
 a { color: var(--sky-600); }
 
 /* ---------- Accessibility: focus ที่มองเห็นชัด ---------- */
@@ -291,6 +305,7 @@ textarea:focus-visible,
 }
 .pet-sticker.available { color: var(--sky-600); }
 .pet-sticker.adopted { color: var(--ink-soft); }
+.pet-sticker.rejected { color: #c23a63; }
 
 .pet-image-small {
   width: 80px;
@@ -495,6 +510,37 @@ textarea:focus-visible,
   min-width: 58px;
 }
 
+.pet-actions {
+  vertical-align: middle !important;
+}
+
+.pet-actions-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-height: 36px;
+}
+
+.pet-actions-inner form {
+  margin: 0;
+}
+
+.pet-actions-inner > a,
+.pet-actions-inner > form {
+  flex: 0 0 auto;
+}
+
+.pet-actions-inner .btn {
+  min-width: 58px;
+  white-space: nowrap;
+}
+
+.pet-table-wrap {
+  border-radius: var(--radius-lg);
+}
+
 /* ---------- ฟอร์ม ---------- */
 .form-panel {
   background: var(--white);
@@ -504,9 +550,18 @@ textarea:focus-visible,
   border: 2px solid var(--sky-200);
 }
 
+.form-panel + .form-panel {
+  margin-top: 18px;
+}
+
 .form-label {
   color: var(--navy-700);
   font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.helper-text,
+.request-details {
   font-size: 0.95rem;
 }
 
@@ -557,6 +612,16 @@ textarea:focus-visible,
 .badge-pending { background: var(--sun-400); color: #4a3400; }
 .badge-approved { background: var(--mint-400); color: var(--navy-900); }
 .badge-rejected { background: var(--blossom-400); color: var(--white); }
+.verified-badge { display: inline-flex; align-items: center; justify-content: center; width: 1.15em; height: 1.15em; border-radius: 50%; background: #2f8ce0; color: #fff; font-size: .72em; font-family: sans-serif; vertical-align: middle; }
+.verification-preview { width: 180px; height: 180px; object-fit: cover; border-radius: var(--radius-md); border: 2px solid var(--sky-300); }
+
+.admin-stat { background: var(--white); border: 2px solid var(--sky-200); border-radius: var(--radius-lg); padding: 18px 20px; box-shadow: var(--shadow-card); }
+.admin-stat span, .admin-stat small { display: block; color: var(--ink-soft); }
+.admin-stat strong { display: block; color: var(--navy-700); font-size: 2rem; line-height: 1.2; }
+.admin-tabs { gap: 8px; }
+.admin-tabs .nav-link { color: var(--navy-700); background: var(--white); border: 2px solid var(--sky-200); border-radius: var(--radius-pill); font-weight: 600; }
+.admin-tabs .nav-link.active { background: var(--sky-500); border-color: var(--sky-500); color: var(--white); }
+.tab-count { display: inline-flex; min-width: 1.5em; justify-content: center; margin-left: 4px; }
 
 /* ---------- Alert ---------- */
 .alert-info {
@@ -641,6 +706,23 @@ textarea:focus-visible,
   }
 
   .form-panel { padding: 24px 20px; }
+
+  .page-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .page-heading .btn {
+    width: 100%;
+  }
+
+  .search-panel { padding: 18px 16px; }
+
+  .admin-tabs { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; }
+
+  .admin-tabs .nav-link { white-space: nowrap; }
 
   .pet-detail-panel { padding: 24px 20px; }
 

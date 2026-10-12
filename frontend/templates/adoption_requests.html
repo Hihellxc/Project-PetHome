@@ -2,7 +2,9 @@
 {% block title %}คำขอรับเลี้ยง - PetHome{% endblock %}
 
 {% block content %}
-<h2 class="mb-4">📨 คำขอรับเลี้ยงที่ได้รับ</h2>
+<div class="page-heading">
+  <h2 class="page-title">คำขอรับเลี้ยงที่ได้รับ</h2>
+</div>
 
 {% for req in requests %}
 <div class="form-panel mb-3">
@@ -31,7 +33,7 @@
     {% endif %}
   </div>
 
-  <div class="row g-2" style="font-size:0.95rem;">
+  <div class="row g-2 request-details">
     <div class="col-md-4"><strong>เบอร์โทร:</strong> {{ req.phone }}</div>
     <div class="col-md-4"><strong>อีเมล:</strong> {{ req.email or "-" }}</div>
     <div class="col-md-4"><strong>ข้อมูลติดต่อ:</strong> {{ req.contact_channel or "-" }}</div>
@@ -47,7 +49,7 @@
     <rect x="4" y="5" width="16" height="14" rx="3"/>
     <path d="M4 7l8 6 8-6" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>
-  <p>ยังไม่มีคำขอรับเลี้ยงเข้ามา รอน้องๆ มีคนสนใจกันนะ 💌</p>
+  <p>ยังไม่มีคำขอรับเลี้ยงเข้ามา</p>
 </div>
 {% endfor %}
 {% endblock %}

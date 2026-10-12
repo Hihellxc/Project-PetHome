@@ -51,6 +51,24 @@ function setupImagePreview() {
     });
 }
 
+function setupSelfiePreview() {
+    const selfieInput = document.getElementById("selfieInput");
+    const previewImg = document.getElementById("selfiePreview");
+    if (!selfieInput || !previewImg) {
+        return;
+    }
+
+    selfieInput.addEventListener("change", function () {
+        const file = selfieInput.files[0];
+        if (!file) {
+            previewImg.classList.add("d-none");
+            return;
+        }
+        previewImg.src = URL.createObjectURL(file);
+        previewImg.classList.remove("d-none");
+    });
+}
+
 
 /* ---------------------------------------------------------
    3) ตรวจสอบฟอร์มเบื้องต้นก่อนส่ง (Form Validation)
@@ -68,10 +86,10 @@ function setupPetFormValidation() {
         const ageYears = Number(ageYearsInput.value);
         const ageMonths = Number(ageMonthsInput.value);
 
-        if (!Number.isInteger(ageYears) || ageYears < 0 || ageYears > 50 ||
+        if (!Number.isInteger(ageYears) || ageYears < 0 || ageYears > 30 ||
             !Number.isInteger(ageMonths) || ageMonths < 0 || ageMonths > 11) {
             event.preventDefault(); // หยุดการส่งฟอร์ม
-            alert("กรุณากรอกอายุให้ถูกต้อง (ปี 0-50 และเดือน 0-11)");
+            alert("กรุณากรอกอายุให้ถูกต้อง (ปี 0-30 และเดือน 0-11)");
         }
     });
 }
@@ -108,13 +126,25 @@ function preventDuplicateSubmit() {
     });
 }
 
+function setupActionConfirmations() {
+    document.querySelectorAll("form[data-confirm]").forEach(function (form) {
+        form.addEventListener("submit", function (event) {
+            if (!confirm(form.dataset.confirm)) {
+                event.preventDefault();
+            }
+        });
+    });
+}
+
 
 /* ---------------------------------------------------------
    เมื่อโหลดหน้าเว็บเสร็จ ให้เรียกใช้ฟังก์ชันทั้งหมดข้างบน
 --------------------------------------------------------- */
 document.addEventListener("DOMContentLoaded", function () {
     setupImagePreview();
+    setupSelfiePreview();
     setupPetFormValidation();
     autoHideAlerts();
     preventDuplicateSubmit();
+    setupActionConfirmations();
 });

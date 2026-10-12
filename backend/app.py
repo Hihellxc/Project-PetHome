@@ -49,6 +49,22 @@ def login_required(view_func):
 
     return wrapped_view
 
+
+def admin_required(view_func):
+    """บังคับให้เป็นผู้ดูแลระบบที่เข้าสู่ระบบแล้ว"""
+    @wraps(view_func)
+    def wrapped_view(*args, **kwargs):
+        if "user_id" not in session:
+            flash("กรุณาเข้าสู่ระบบก่อน")
+            return redirect(url_for("login"))
+        if session.get("role") != "admin":
+            flash("หน้านี้สำหรับผู้ดูแลระบบเท่านั้น")
+            return redirect(url_for("home"))
+        return view_func(*args, **kwargs)
+
+    return wrapped_view
+
+
 # หมายเหตุสำคัญ:
 # แพลตฟอร์ม cloud อย่าง Aiven จะสร้างฐานข้อมูล MySQL ให้ แล้วให้ค่าการเชื่อมต่อมา
 # เราตั้งให้อ่านค่าจาก environment variable ก่อนเสมอ ถ้าไม่มี (เช่นตอนรันในเครื่องตัวเอง)
@@ -92,7 +108,7 @@ THAI_PROVINCES = [
     "ลพบุรี", "ลำปาง", "ลำพูน", "เลย", "ศรีสะเกษ", "สกลนคร", "สงขลา",
     "สตูล", "สมุทรปราการ", "สมุทรสงคราม", "สมุทรสาคร", "สระแก้ว", "สระบุรี",
     "สิงห์บุรี", "สุโขทัย", "สุพรรณบุรี", "สุราษฎร์ธานี", "สุรินทร์", "หนองคาย",
-    "หนองบัวลำภู", "อยุธยา", "อ่างทอง", "อำนาจเจริญ", "อุดรธานี", "อุตรดิตถ์",
+    "หนองบัวลำภู", "อ่างทอง", "อำนาจเจริญ", "อุดรธานี", "อุตรดิตถ์",
     "อุทัยธานี", "อุบลราชธานี",
 ]
 
@@ -275,6 +291,13 @@ def send_email(to_address, subject, body):
 def home():
     pet_type = request.args.get("type", "")
     province = request.args.get("province", "")
+    keyword = request.args.get("keyword", "").strip()
+    breed = request.args.get("breed", "").strip()
+    gender = request.args.get("gender", "")
+    age_min = request.args.get("age_min", type=int)
+    age_max = request.args.get("age_max", type=int)
+    sterilized = request.args.get("sterilized") == "1"
+    vaccinated = request.args.get("vaccinated") == "1"
     page = max(request.args.get("page", 1, type=int), 1)
     per_page = 12
 
@@ -302,6 +325,7 @@ def home():
                MOD(COALESCE(pets.age_months, 0), 12) AS age_remainder,
                COALESCE(pet_images.image_url, '') AS image
         FROM pets
+         JOIN users ON users.id = pets.user_id
         LEFT JOIN pet_images ON pet_images.pet_id = pets.id AND pet_images.is_primary = 1
         WHERE pets.status = 'available'
     """
@@ -315,12 +339,29 @@ def home():
         query += " AND pets.province LIKE %s"
         params.append(f"%{province}%")
 
-    count_query = query.replace(
-        "SELECT pets.*, pets.id AS pet_id, pets.species AS type,\n               FLOOR(COALESCE(pets.age_months, 0) / 12) AS age_years,\n               MOD(COALESCE(pets.age_months, 0), 12) AS age_remainder,\n               COALESCE(pet_images.image_url, '') AS image",
-        "SELECT COUNT(DISTINCT pets.id)"
-    )
+    if keyword:
+        query += " AND (pets.name LIKE %s OR pets.breed LIKE %s OR pets.description LIKE %s)"
+        params.extend([f"%{keyword}%"] * 3)
+    if breed:
+        query += " AND pets.breed LIKE %s"
+        params.append(f"%{breed}%")
+    if gender in {"male", "female", "unknown"}:
+        query += " AND pets.gender = %s"
+        params.append(gender)
+    if age_min is not None and age_min >= 0:
+        query += " AND pets.age_months >= %s"
+        params.append(age_min * 12)
+    if age_max is not None and age_max >= 0:
+        query += " AND pets.age_months <= %s"
+        params.append(age_max * 12 + 11)
+    if sterilized:
+        query += " AND pets.sterilization_status = 1"
+    if vaccinated:
+        query += " AND pets.vaccinated = 1"
+
+    count_query = "SELECT COUNT(DISTINCT pets.id) AS total_count FROM pets" + query.split("FROM pets", 1)[1]
     cursor.execute(count_query, params)
-    total_pets = cursor.fetchone()["COUNT(DISTINCT pets.id)"]
+    total_pets = cursor.fetchone()["total_count"]
     total_pages = max((total_pets + per_page - 1) // per_page, 1)
     page = min(page, total_pages)
 
@@ -332,6 +373,8 @@ def home():
 
     return render_template(
         "home.html", pets=pets, pet_type=pet_type, province=province,
+        keyword=keyword, breed=breed, gender=gender, age_min=age_min,
+        age_max=age_max, sterilized=sterilized, vaccinated=vaccinated,
         provinces=THAI_PROVINCES, page=page, total_pages=total_pages,
     )
 
@@ -384,6 +427,7 @@ def login():
         if user and check_password_hash(user["password_hash"], password):
             session["user_id"] = user["id"]
             session["user_name"] = user["name"]
+            session["role"] = user["role"]
             flash(f"ยินดีต้อนรับ {user['name']}")
             return redirect(url_for("home"))
         else:
@@ -465,26 +509,20 @@ def add_pet():
             flash("กรุณากรอกอายุเป็นตัวเลขเท่านั้น")
             return render_template("add_pet.html", provinces=THAI_PROVINCES)
 
-        if not 2 <= len(name) <= 100:
-            flash("ชื่อสัตว์ต้องมีความยาว 2-100 ตัวอักษร")
-            return render_template("add_pet.html", provinces=THAI_PROVINCES)
-        if pet_type not in {"หมา", "แมว"} or gender_value not in {"ผู้", "เมีย"}:
+        if pet_type not in {"หมา", "แมว"} or gender_value not in {"ผู้", "เมีย", "ไม่ระบุ"}:
             flash("กรุณาเลือกประเภทและเพศสัตว์ให้ถูกต้อง")
             return render_template("add_pet.html", provinces=THAI_PROVINCES)
-        if age_years < 0 or age_years > 50 or not 0 <= age_months <= 11:
-            flash("กรุณากรอกอายุให้ถูกต้อง (ไม่เกิน 50 ปี และเดือนต้องอยู่ระหว่าง 0-11)")
+        if age_years < 0 or age_years > 30 or not 0 <= age_months <= 11:
+            flash("กรุณากรอกอายุให้ถูกต้อง (ไม่เกิน 30 ปี และเดือนต้องอยู่ระหว่าง 0-11)")
             return render_template("add_pet.html", provinces=THAI_PROVINCES)
         if province not in THAI_PROVINCES:
             flash("กรุณาเลือกจังหวัดจากรายการที่กำหนด")
-            return render_template("add_pet.html", provinces=THAI_PROVINCES)
-        if len(description) < 10 or len(description) > 2000:
-            flash("รายละเอียดต้องมีความยาว 10-2,000 ตัวอักษร")
             return render_template("add_pet.html", provinces=THAI_PROVINCES)
         if request.form.get("confirm_info") != "on":
             flash("กรุณายืนยันว่าข้อมูลสัตว์เป็นความจริงก่อนบันทึก")
             return render_template("add_pet.html", provinces=THAI_PROVINCES)
 
-        gender = {"ผู้": "male", "เมีย": "female"}[gender_value]
+        gender = {"ผู้": "male", "เมีย": "female", "ไม่ระบุ": "unknown"}[gender_value]
         age = age_years * 12 + age_months
         sterilization_status = 1 if request.form.get("sterilization_status") else 0
         vaccinated = 1 if request.form.get("vaccinated") else 0
@@ -504,7 +542,8 @@ def add_pet():
                     image_filename = ""
                     flash("อัปโหลดรูปภาพไม่สำเร็จ แต่ข้อมูลอื่นถูกบันทึกแล้ว")
             else:
-                flash("กรุณาเลือกไฟล์รูป PNG, JPG หรือ GIF ที่มีขนาดไม่เกิน 5 MB (บันทึกประกาศโดยไม่มีรูป)")
+                flash("กรุณาเลือกไฟล์รูป PNG, JPG หรือ GIF ที่มีขนาดไม่เกิน 5 MB")
+                return render_template("add_pet.html", provinces=THAI_PROVINCES)
 
         conn = get_db()
         cursor = conn.cursor()
@@ -560,20 +599,41 @@ def edit_pet(pet_id):
         return redirect(url_for("my_pets"))
 
     if request.method == "POST":
-        name = request.form["name"]
+        name = request.form.get("name", "").strip()
         pet_type = request.form["type"]
         breed = request.form.get("breed", "").strip() or "ไม่ทราบ"
-        gender = {"ผู้": "male", "เมีย": "female"}.get(request.form["gender"], "unknown")
-        age_years = int(request.form["age_years"])
-        age_months = int(request.form["age_months"])
+        gender_value = request.form.get("gender", "")
+        gender = {"ผู้": "male", "เมีย": "female", "ไม่ระบุ": "unknown"}.get(gender_value, "")
+        try:
+            age_years = int(request.form["age_years"])
+            age_months = int(request.form["age_months"])
+        except (KeyError, ValueError):
+            flash("กรุณากรอกอายุเป็นตัวเลขเท่านั้น")
+            cursor.close()
+            conn.close()
+            return render_template("edit_pet.html", pet=pet, provinces=THAI_PROVINCES)
+        province = request.form.get("province", "").strip()
         age = age_years * 12 + age_months
-        province = request.form["province"]
         sterilization_status = 1 if request.form.get("sterilization_status") else 0
         vaccinated = 1 if request.form.get("vaccinated") else 0
-        description = request.form["description"]
-        status = {"Available": "available", "Adopted": "adopted"}.get(
-            request.form["status"], "available"
-        )
+        description = request.form.get("description", "").strip()
+        status = "adopted" if request.form.get("status") == "Adopted" else "available"
+
+        if pet_type not in {"หมา", "แมว"} or not gender:
+            flash("กรุณากรอกประเภทและเพศให้ถูกต้อง")
+            cursor.close()
+            conn.close()
+            return render_template("edit_pet.html", pet=pet, provinces=THAI_PROVINCES)
+        if age_years < 0 or age_years > 30 or not 0 <= age_months <= 11:
+            flash("กรุณากรอกอายุให้ถูกต้อง (ไม่เกิน 30 ปี และเดือนต้องอยู่ระหว่าง 0-11)")
+            cursor.close()
+            conn.close()
+            return render_template("edit_pet.html", pet=pet, provinces=THAI_PROVINCES)
+        if province not in THAI_PROVINCES:
+            flash("กรุณาเลือกจังหวัดให้ถูกต้อง")
+            cursor.close()
+            conn.close()
+            return render_template("edit_pet.html", pet=pet, provinces=THAI_PROVINCES)
 
         image_filename = pet["image"]
         image_file = request.files.get("image")
@@ -585,7 +645,10 @@ def edit_pet(pet_id):
                     print(f"บันทึกไฟล์รูปภาพไม่สำเร็จ: {e}")
                     flash("บันทึกรูปภาพใหม่ไม่สำเร็จ ระบบใช้รูปเดิมไว้ก่อน")
             else:
-                flash("กรุณาเลือกไฟล์รูป PNG, JPG หรือ GIF ที่มีขนาดไม่เกิน 5 MB (ใช้รูปเดิมไว้ก่อน)")
+                flash("กรุณาเลือกไฟล์รูป PNG, JPG หรือ GIF ที่มีขนาดไม่เกิน 5 MB")
+                cursor.close()
+                conn.close()
+                return render_template("edit_pet.html", pet=pet, provinces=THAI_PROVINCES)
 
         # หมายเหตุ: connection object ของ mysql.connector ไม่มีเมธอด .execute()
         # ต้องสั่งผ่าน cursor เท่านั้น (ใช้ cursor ตัวเดิมที่เปิดไว้ด้านบนได้เลย)
@@ -933,6 +996,91 @@ def reject_request(request_id):
     return redirect(url_for("adoption_requests"))
 
 
+@app.route("/admin")
+@admin_required
+def admin_dashboard():
+    conn = get_db()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute(
+        """SELECT reports.*, pets.name AS pet_name, users.name AS reporter_name
+           FROM reports
+           LEFT JOIN pets ON reports.pet_id=pets.id
+           LEFT JOIN users ON reports.reporter_id=users.id
+           WHERE reports.status=%s ORDER BY reports.created_at ASC""",
+        ("pending",),
+    )
+    reports = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return render_template(
+        "admin.html",
+        reports=reports,
+        report_count=len(reports),
+    )
+
+
+@app.route("/pet/<int:pet_id>/report", methods=["POST"])
+@login_required
+def report_pet(pet_id):
+    reason = request.form.get("reason", "").strip()
+    details = request.form.get("details", "").strip()
+    allowed_reasons = {"ข้อมูลไม่จริง", "เนื้อหาไม่เหมาะสม", "สงสัยหลอกลวง", "อื่นๆ"}
+    if reason not in allowed_reasons:
+        flash("กรุณาเลือกเหตุผลการรายงาน")
+        return redirect(url_for("pet_detail", pet_id=pet_id))
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM pets WHERE id=%s", (pet_id,))
+    if not cursor.fetchone():
+        cursor.close()
+        conn.close()
+        flash("ไม่พบประกาศนี้")
+        return redirect(url_for("home"))
+    cursor.execute(
+        "SELECT id FROM reports WHERE reporter_id=%s AND pet_id=%s AND status='pending' LIMIT 1",
+        (session["user_id"], pet_id),
+    )
+    if cursor.fetchone():
+        flash("คุณมีรายงานประกาศนี้ที่กำลังรอตรวจสอบอยู่แล้ว")
+    else:
+        cursor.execute(
+            "INSERT INTO reports (reporter_id, pet_id, reason, details) VALUES (%s, %s, %s, %s)",
+            (session["user_id"], pet_id, reason, details),
+        )
+        conn.commit()
+        flash("ส่งรายงานให้ผู้ดูแลระบบแล้ว")
+    cursor.close()
+    conn.close()
+    return redirect(url_for("pet_detail", pet_id=pet_id))
+
+
+@app.route("/admin/report/<int:report_id>/<action>", methods=["POST"])
+@admin_required
+def review_report(report_id, action):
+    status = {"review": "reviewed", "dismiss": "dismissed"}.get(action)
+    if action not in {"review", "dismiss", "remove"}:
+        flash("คำสั่งไม่ถูกต้อง")
+        return redirect(url_for("admin_dashboard"))
+    conn = get_db()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT pet_id FROM reports WHERE id=%s AND status='pending'", (report_id,))
+    report = cursor.fetchone()
+    if report and action == "remove":
+        cursor.execute("UPDATE pets SET status='rejected' WHERE id=%s", (report["pet_id"],))
+        status = "reviewed"
+    if report:
+        cursor.execute(
+            "UPDATE reports SET status=%s, reviewed_by=%s, reviewed_at=CURRENT_TIMESTAMP "
+            "WHERE id=%s AND status='pending'",
+            (status, session["user_id"], report_id),
+        )
+    conn.commit()
+    cursor.close()
+    conn.close()
+    flash("ปิดประกาศและจัดการรายงานแล้ว" if action == "remove" else "อัปเดตรายงานแล้ว")
+    return redirect(url_for("admin_dashboard"))
+
+
 # ---------- เริ่มรันเว็บ ----------
 
 if __name__ == "__main__":
@@ -940,7 +1088,7 @@ if __name__ == "__main__":
     # รันแบบนี้ใช้สำหรับทดสอบในเครื่องตัวเองเท่านั้น
     # ตอน deploy จริงบน Railway จะไม่ใช้บรรทัดนี้ แต่ใช้ gunicorn แทน (ดูไฟล์ Procfile)
     port = int(os.environ.get("PORT", 5000))
-    debug_mode = os.environ.get("FLASK_DEBUG", "1") == "1"
+    debug_mode = os.environ.get("FLASK_DEBUG", "0") == "1"
     app.run(host="0.0.0.0", port=port, debug=debug_mode)
 else:
     # เมื่อรันผ่าน gunicorn (production) ให้สร้างตารางฐานข้อมูลตอนโมดูลถูก import ครั้งแรก

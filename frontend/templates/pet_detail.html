@@ -19,9 +19,13 @@
           <h2 class="pet-detail-title mb-0">{{ pet.name }}</h2>
         </div>
         {% if pet.status == 'adopted' %}
-          <span class="badge badge-adopted">🏡 มีบ้านแล้ว</span>
+          <span class="badge badge-adopted">มีบ้านแล้ว</span>
+        {% elif pet.status == 'pending' %}
+          <span class="badge badge-pending">รอตรวจสอบ</span>
+        {% elif pet.status == 'rejected' %}
+          <span class="badge badge-rejected">ไม่ผ่านการตรวจสอบ</span>
         {% else %}
-          <span class="badge badge-available">✨ พร้อมหาบ้าน</span>
+          <span class="badge badge-available">พร้อมหาบ้าน</span>
         {% endif %}
       </div>
       <ul class="pet-facts mb-0">
@@ -29,7 +33,7 @@
         <li><span>พันธุ์</span><strong>{{ pet.breed or 'ไม่ทราบ' }}</strong></li>
         <li><span>เพศ</span><strong>{{ 'ผู้' if pet.gender == 'male' else 'เมีย' if pet.gender == 'female' else 'ไม่ระบุ' }}</strong></li>
         <li><span>อายุ</span><strong>{{ pet.age_years }} ปี{% if pet.age_remainder %} {{ pet.age_remainder }} เดือน{% endif %}</strong></li>
-        <li><span>จังหวัด</span><strong>📍 {{ pet.province }}</strong></li>
+        <li><span>จังหวัด</span><strong>{{ pet.province }}</strong></li>
         <li><span>ทำหมัน</span><strong>{{ 'ทำหมันแล้ว' if pet.sterilization_status else 'ยังไม่ได้ทำหมัน' }}</strong></li>
         <li><span>วัคซีน</span><strong>{{ 'ฉีดวัคซีนแล้ว' if pet.vaccinated else 'ยังไม่ได้ฉีดวัคซีน' }}</strong></li>
         <li><span>เจ้าของ</span><strong>{{ pet.owner_name }}</strong></li>
@@ -38,6 +42,22 @@
     </div>
   </div>
 </div>
+
+{% if session.user_id and session.user_id != pet.user_id %}
+<div class="text-center mt-3">
+  <button class="btn btn-sm btn-outline-danger" type="button" data-bs-toggle="collapse" data-bs-target="#reportPet">รายงานประกาศนี้</button>
+  <div class="collapse mt-3" id="reportPet">
+    <div class="form-panel text-start">
+      <form method="POST" action="{{ url_for('report_pet', pet_id=pet.pet_id) }}" class="row g-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="col-md-4"><select name="reason" class="form-select" required><option value="">เลือกเหตุผล</option><option>ข้อมูลไม่จริง</option><option>เนื้อหาไม่เหมาะสม</option><option>สงสัยหลอกลวง</option><option>อื่นๆ</option></select></div>
+        <div class="col-md-6"><input name="details" class="form-control" maxlength="1000" placeholder="รายละเอียดเพิ่มเติม (ถ้ามี)"></div>
+        <div class="col-md-2"><button class="btn btn-outline-danger w-100" type="submit">ส่งรายงาน</button></div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
 
 <div class="paw-divider mt-5">
   <svg viewBox="0 0 24 24"><path d="M12 14.5c-2.9 0-6 2.1-6 4.6 0 1 .8 1.9 1.9 1.9.9 0 1.6-.4 2.4-.8.6-.3 1.2-.6 1.7-.6s1.1.3 1.7.6c.8.4 1.5.8 2.4.8 1.1 0 1.9-.9 1.9-1.9 0-2.5-3.1-4.6-6-4.6zM6.5 11c1.1 0 2-1.1 2-2.5S7.6 6 6.5 6 4.5 7.1 4.5 8.5 5.4 11 6.5 11zm11 0c1.1 0 2-1.1 2-2.5S18.6 6 17.5 6s-2 1.1-2 2.5 .9 2.5 2 2.5zM9.2 8c1.1 0 2-1.2 2-2.7S10.3 2.6 9.2 2.6s-2 1.2-2 2.7.9 2.7 2 2.7zm5.6 0c1.1 0 2-1.2 2-2.7S15.9 2.6 14.8 2.6s-2 1.2-2 2.7.9 2.7 2 2.7z"/></svg>
@@ -48,7 +68,7 @@
   <div class="col-md-8">
     <div class="form-panel">
       <h4 class="mb-1 text-center">แจ้งความประสงค์รับเลี้ยง</h4>
-      <p class="text-center text-muted mb-3" style="font-size:0.9rem;">
+      <p class="helper-text text-center text-muted mb-3">
         ข้อมูลเพิ่มเติมด้านล่างช่วยให้เจ้าของตัดสินใจได้ง่ายขึ้น (ช่องที่ไม่มี * ไม่กรอกก็ได้)
       </p>
       <form method="POST" action="{{ url_for('send_adoption_request', pet_id=pet.pet_id) }}" class="row g-3">
@@ -123,7 +143,9 @@
   </div>
 </div>
 {% else %}
-  <p class="text-center text-muted">สัตว์ตัวนี้มีเจ้าของใหม่แล้ว 🎉</p>
+  <p class="text-center text-muted">
+    {% if pet.status == 'pending' %}ประกาศนี้กำลังรอผู้ดูแลระบบตรวจสอบ{% elif pet.status == 'rejected' %}ประกาศนี้ไม่ผ่านการตรวจสอบ{% else %}สัตว์ตัวนี้มีเจ้าของใหม่แล้ว 🎉{% endif %}
+  </p>
 {% endif %}
 
 {% endblock %}

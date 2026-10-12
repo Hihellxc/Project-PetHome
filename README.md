@@ -1,6 +1,6 @@
 # 🐾 PetHome – ระบบรับเลี้ยงสัตว์
 
-เว็บไซต์ลงประกาศสัตว์ที่ต้องการหาบ้านใหม่ ดูรายละเอียดสัตว์ (สุนัข, แมว) ค้นหาตามประเภท/จังหวัด
+เว็บไซต์ลงประกาศสัตว์ที่ต้องการหาบ้านใหม่ ดูรายละเอียดสัตว์ (สุนัข, แมว) ค้นหาแบบละเอียด และส่งคำขอรับเลี้ยงได้
 และส่งคำขอรับเลี้ยงได้ พร้อมระบบแจ้งเตือนอีเมลอัตโนมัติทั้งเจ้าของและผู้ขอรับเลี้ยง
 
 ## เทคโนโลยีที่ใช้
@@ -38,13 +38,13 @@ mysql -u root -p < database/schema.sql
 ### 2. ตั้งค่าการเชื่อมต่อฐานข้อมูล
 เปิด `backend/app.py` แก้ค่า `DB_CONFIG` หรือตั้งเป็น environment variable ก็ได้ (แนะนำ):
 
-**Windows PowerShell:**
-```powershell
-$env:MYSQLHOST="localhost"
-$env:MYSQLPORT="3306"
-$env:MYSQLUSER="root"
-$env:MYSQLPASSWORD="รหัสผ่าน MySQL ของคุณ"
-$env:MYSQLDATABASE="pethome"
+สร้างไฟล์ `.env` ไว้ที่ root ของโปรเจกต์
+```bash
+MYSQLHOST="localhost"
+MYSQLPORT="3306"
+MYSQLUSER="root"
+MYSQLPASSWORD="รหัสผ่าน MySQL ของคุณ"
+MYSQLDATABASE="pethome"
 ```
 
 ### 3. (ทางเลือก) ตั้งค่าให้ส่งอีเมลแจ้งเตือนได้
@@ -72,13 +72,13 @@ python -m backend.app
 - **Start Command:** `gunicorn backend.app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 60`
 - **Environment Variables:** `SECRET_KEY`, `MYSQLHOST`, `MYSQLPORT`, `MYSQLUSER`, `MYSQLPASSWORD`, `MYSQLDATABASE`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL` และค่า Cloudinary ทั้งสามตัว
 
-ถ้าเป็นฐานข้อมูลเดิม ให้รัน migration ใน `database/migrations/001_adoption_request_indexes.sql` และ `database/migrations/002_add_pet_indexes.sql` ตามลำดับก่อนเปิดใช้งานจริง
+ถ้าเป็นฐานข้อมูลเดิม ให้รัน migration ใน `database/migrations/001_adoption_request_indexes.sql`, `database/migrations/002_add_pet_indexes.sql`, `database/migrations/003_verification_reports.sql`, `database/migrations/004_remove_pet_approval.sql` และ `database/migrations/005_remove_pet_text_length_limits.sql` ตามลำดับก่อนเปิดใช้งานจริง
 
 ## ฟีเจอร์หลัก
 1. **สมัครสมาชิก / เข้าสู่ระบบ / ออกจากระบบ** — เข้ารหัสรหัสผ่านด้วย `werkzeug.security`
 2. **ลงประกาศสัตว์ (CRUD)** — เพิ่ม / แก้ไข / ลบ / ดูประกาศของตัวเอง พร้อมอัปโหลดรูป
 3. **หน้าหลัก** — แสดงรายการสัตว์ทั้งหมดที่ยังหาบ้านอยู่ (สถานะ Available)
-4. **ค้นหา** — ค้นหาตามประเภทสัตว์และจังหวัด (ช่องจังหวัดพิมพ์ค้นหาได้ เลือกจาก 77 จังหวัดทั้งหมด)
+4. **ค้นหาแบบละเอียด** — ค้นหาด้วยชื่อ/พันธุ์/รายละเอียด ประเภท จังหวัด เพศ ช่วงอายุ ทำหมัน และวัคซีน
 5. **หน้ารายละเอียดสัตว์** — รูปใหญ่ ข้อมูลครบ พร้อมฟอร์มส่งคำขอรับเลี้ยง
 6. **ส่งคำขอรับเลี้ยง** (ไม่ต้อง login) — ระบบสร้างผู้สมัคร Guest ใน `users` ให้อัตโนมัติ และเก็บข้อมูลผู้ขอละเอียดขึ้น: ชื่อ, เบอร์, อีเมล, จังหวัดที่พัก,
    อาชีพ, ประสบการณ์เลี้ยงสัตว์, ลักษณะที่พัก, สมาชิกในบ้าน, ข้อความ — ช่วยให้เจ้าของตัดสินใจได้ง่ายขึ้น
@@ -88,10 +88,11 @@ python -m backend.app
    - เจ้าของได้อีเมลทันทีที่มีคนส่งคำขอรับเลี้ยงเข้ามาใหม่
    - ผู้ขอได้อีเมลยืนยันว่าส่งคำขอสำเร็จ (ถ้ากรอกอีเมลไว้)
    - ผู้ขอได้อีเมลแจ้งผลทันทีที่เจ้าของกดอนุมัติ/ปฏิเสธ
+9. **ระบบผู้ดูแลและรายงาน** — ผู้ใช้รายงานประกาศให้ admin ตรวจสอบหรือปิดประกาศได้
 
 ## Database Schema
 ฐานข้อมูลหลักอยู่ใน `database/schema.sql` ประกอบด้วยตาราง `users`, `pets`, `pet_images`,
-`adoption_requests` และ `admin_audit_logs` โดยคำขอรับเลี้ยงหนึ่งคนต่อสัตว์หนึ่งตัวจะส่งซ้ำไม่ได้
+`adoption_requests`, `admin_audit_logs` และ `reports` โดยคำขอรับเลี้ยงหนึ่งคนต่อสัตว์หนึ่งตัวจะส่งซ้ำไม่ได้
 ถ้ามีฐานข้อมูลเดิม ให้รัน migration ใน `database/migrations/001_adoption_request_indexes.sql` หลังตรวจสอบคำขอซ้ำ
 
 ## หมายเหตุเกี่ยวกับโค้ด
@@ -109,6 +110,6 @@ python -m backend.app
 
 ## แนวทางต่อยอด (ถ้าต้องการพัฒนาเพิ่ม)
 - หน้า Home มี pagination และคงค่าตัวกรองประเภท/จังหวัดระหว่างเปลี่ยนหน้า
-- เพิ่มระบบ Admin กลางสำหรับจัดการทั้งระบบ
+- เพิ่มระบบแจ้งเตือนเมื่อ admin ตรวจสอบ verification/report เสร็จ
 - ย้ายรูปที่อัปโหลดไปเก็บบน cloud storage (เช่น Cloudinary) เพื่อไม่ให้หายตอน redeploy
 - เพิ่มการอัปโหลดรูปได้หลายรูปต่อประกาศ

@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}ศูนย์แอดมิน - PetHome{% endblock %}
+
+{% block content %}
+<div class="page-heading">
+  <h2 class="page-title">ศูนย์จัดการระบบ</h2>
+</div>
+
+<div class="admin-summary row g-3 mb-4">
+  <div class="col-md-12"><div class="admin-stat"><span>รายงาน</span><strong>{{ report_count }}</strong><small>รายการรอดำเนินการ</small></div></div>
+</div>
+
+<ul class="nav nav-pills admin-tabs mb-4" id="adminTabs" role="tablist">
+  <li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#reportsTab" type="button">รายงาน <span class="tab-count">{{ report_count }}</span></button></li>
+</ul>
+
+<div class="tab-content">
+<section class="tab-pane fade show active" id="reportsTab" role="tabpanel">
+  <h3>รายงานประกาศ</h3>
+  <div class="table-responsive"><table class="table table-pethome align-middle"><thead><tr><th>ประกาศ</th><th>ผู้รายงาน</th><th>เหตุผล</th><th>รายละเอียด</th><th>จัดการ</th></tr></thead><tbody>
+    {% for report in reports %}<tr><td>{{ report.pet_name or 'ประกาศถูกลบ' }}</td><td>{{ report.reporter_name or 'ไม่ทราบชื่อ' }}</td><td>{{ report.reason }}</td><td>{{ report.details or '-' }}</td><td class="table-actions"><a href="{{ url_for('pet_detail', pet_id=report.pet_id) }}" class="btn btn-sm btn-outline-primary">ดูรายละเอียด</a><form method="POST" action="{{ url_for('review_report', report_id=report.id, action='remove') }}" class="d-inline" data-confirm="ยืนยันปิดประกาศนี้หรือไม่?"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-danger">ปิดประกาศ</button></form><form method="POST" action="{{ url_for('review_report', report_id=report.id, action='review') }}" class="d-inline"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-success">ดำเนินการแล้ว</button></form><form method="POST" action="{{ url_for('review_report', report_id=report.id, action='dismiss') }}" class="d-inline" data-confirm="ยืนยันการยกเลิกรายงานนี้หรือไม่?"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-outline-secondary">ยกเลิก</button></form></td></tr>
+    {% else %}<tr><td colspan="5" class="text-muted">ไม่มีรายงานที่รอตรวจสอบ</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+</div>
+{% endblock %}

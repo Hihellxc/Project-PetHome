@@ -2,7 +2,9 @@
 {% block title %}แก้ไขประกาศ - PetHome{% endblock %}
 
 {% block content %}
-<h2 class="mb-4">✏️ แก้ไขประกาศสัตว์เลี้ยง</h2>
+<div class="page-heading">
+  <h2 class="page-title">แก้ไขประกาศสัตว์เลี้ยง</h2>
+</div>
 
 <div class="form-panel">
   <form method="POST" action="{{ url_for('edit_pet', pet_id=pet.pet_id) }}" enctype="multipart/form-data" class="row g-3">
@@ -38,14 +40,15 @@
     <div class="col-md-3">
       <label class="form-label">เพศ</label>
       <select name="gender" class="form-select" required>
-        <option value="ผู้" {% if pet.gender == 'ผู้' %}selected{% endif %}>ผู้</option>
-        <option value="เมีย" {% if pet.gender == 'เมีย' %}selected{% endif %}>เมีย</option>
+        <option value="ไม่ระบุ" {% if pet.gender == 'unknown' %}selected{% endif %}>ไม่ระบุ</option>
+        <option value="ผู้" {% if pet.gender == 'male' %}selected{% endif %}>ผู้</option>
+        <option value="เมีย" {% if pet.gender == 'female' %}selected{% endif %}>เมีย</option>
       </select>
     </div>
 
     <div class="col-md-3">
       <label class="form-label">อายุ (ปี)</label>
-      <input type="number" name="age_years" class="form-control" value="{{ pet.age_years }}" min="0" required>
+      <input type="number" name="age_years" class="form-control" value="{{ pet.age_years }}" min="0" max="30" required>
     </div>
 
     <div class="col-md-3">
