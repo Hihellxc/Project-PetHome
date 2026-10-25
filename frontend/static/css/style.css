@@ -801,3 +801,48 @@ textarea:focus-visible,
     white-space: nowrap;
   }
 }
+
+
+/* ---------- คำแนะนำการรับเลี้ยง ---------- */
+.btn-how-to-adopt {
+  background: var(--white);
+  border: 2px solid var(--white);
+  color: var(--navy-700);
+}
+.btn-how-to-adopt:hover, .btn-how-to-adopt:active {
+  background: var(--sky-100);
+  border-color: var(--sky-100);
+  color: var(--navy-900);
+}
+.adoption-guide { border: 0; border-radius: var(--radius-xl); }
+.adoption-guide .modal-header { padding: 28px 28px 12px; border: 0; gap: 16px; }
+.adoption-guide .modal-body { padding: 12px 28px; }
+.adoption-guide .modal-footer { padding: 20px 28px 28px; border: 0; gap: 8px; }
+.adoption-guide-steps { list-style: none; padding: 0; margin: 0; counter-reset: adoption-step; }
+.adoption-guide-steps li {
+  counter-increment: adoption-step;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.adoption-guide-steps li::before {
+  content: counter(adoption-step);
+  display: grid;
+  place-items: center;
+  flex: 0 0 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--sky-100);
+  color: var(--sky-600);
+  font-weight: 700;
+}
+.adoption-guide-steps h3 { font-family: "Sarabun", sans-serif; font-size: 1.08rem; margin: 3px 0 6px; }
+.adoption-guide-steps p { color: var(--ink-soft); margin: 0; }
+#browsePets { scroll-margin-top: 96px; }
+@media (max-width: 575.98px) {
+  .adoption-guide .modal-header { padding: 22px 20px 10px; }
+  .adoption-guide .modal-body { padding: 10px 20px; }
+  .adoption-guide .modal-footer { padding: 16px 20px 22px; }
+  .adoption-guide-steps li { gap: 12px; }
+}

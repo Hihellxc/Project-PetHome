@@ -140,7 +140,28 @@ function setupActionConfirmations() {
 /* ---------------------------------------------------------
    เมื่อโหลดหน้าเว็บเสร็จ ให้เรียกใช้ฟังก์ชันทั้งหมดข้างบน
 --------------------------------------------------------- */
+
+/* ปิดคำแนะนำก่อนเลื่อนไปยังรายการ เพื่อไม่ให้การคืนโฟกัสดึงหน้ากลับด้านบน */
+function setupAdoptionGuide() {
+    const modal = document.getElementById("howToAdoptModal");
+    const browseButton = document.querySelector("[data-adoption-browse]");
+    const target = document.getElementById("browsePets");
+    if (!modal || !browseButton || !target) {
+        return;
+    }
+    browseButton.addEventListener("click", function () {
+        modal.addEventListener("hidden.bs.modal", function () {
+            target.focus({ preventScroll: true });
+            target.scrollIntoView({
+                behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+                block: "start"
+            });
+        }, { once: true });
+    });
+}
+
 document.addEventListener("DOMContentLoaded", function () {
+    setupAdoptionGuide();
     setupImagePreview();
     setupSelfiePreview();
     setupPetFormValidation();

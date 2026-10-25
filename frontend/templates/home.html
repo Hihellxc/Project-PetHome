@@ -25,6 +25,9 @@
     </div>
     <h1>หาบ้านใหม่ให้น้องหมา น้องแมว</h1>
     <p>รวมประกาศสัตว์เลี้ยงที่กำลังมองหาเจ้าของใหม่ทั่วประเทศไทย เลือกดู ทำความรู้จัก แล้วส่งคำขอรับเลี้ยงได้ทันที ใช้งานง่าย</p>
+    <button type="button" class="btn btn-how-to-adopt mt-2" data-bs-toggle="modal" data-bs-target="#howToAdoptModal">
+      รับเลี้ยงอย่างไร?
+    </button>
   </div>
 
   <!-- มาสคอตหมา-แมวน่ารัก -->
@@ -71,8 +74,34 @@
   </div>
 </div>
 
+
+<!-- คำแนะนำสำหรับผู้ที่สนใจรับเลี้ยง -->
+<div class="modal fade" id="howToAdoptModal" tabindex="-1" aria-labelledby="howToAdoptTitle" aria-describedby="howToAdoptIntro" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+    <div class="modal-content adoption-guide">
+      <div class="modal-header">
+        <h2 class="modal-title fs-4" id="howToAdoptTitle">รับเลี้ยงน้องใน 4 ขั้นตอน</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="ปิดคำแนะนำ"></button>
+      </div>
+      <div class="modal-body">
+        <p id="howToAdoptIntro" class="mb-4">เริ่มต้นหาสมาชิกใหม่ให้ครอบครัวได้ง่าย ๆ มาดูวิธีทำความรู้จักและส่งคำขอรับเลี้ยงน้องกัน</p>
+        <ol class="adoption-guide-steps">
+          <li><div><h3>เลือกน้องที่อยากรับเลี้ยง</h3><p>ดูประกาศน้องหมาและน้องแมว ใช้ตัวกรองประเภท อายุ หรือจังหวัด เพื่อหาน้องที่เหมาะกับคุณ</p></div></li>
+          <li><div><h3>อ่านข้อมูลน้องให้ครบ</h3><p>กด “ดูรายละเอียด” เพื่อรู้จักนิสัย อายุ สุขภาพ และสิ่งที่น้องต้องการ ลองดูว่าคุณมีเวลาและพื้นที่พร้อมดูแลน้องหรือไม่</p></div></li>
+          <li><div><h3>ส่งคำขอรับเลี้ยง</h3><p>กรอกแบบฟอร์มในหน้ารายละเอียดน้อง โดยระบุชื่อ เบอร์โทร และข้อมูลการดูแลให้ชัดเจน เพื่อให้เจ้าของประกาศพิจารณาและติดต่อกลับ</p></div></li>
+          <li><div><h3>รอเจ้าของติดต่อกลับ</h3><p>เจ้าของประกาศจะเป็นผู้พิจารณาคำขอ หากได้รับการติดต่อ ให้พูดคุยรายละเอียดและนัดพบน้องในสถานที่ที่เหมาะสมร่วมกัน</p></div></li>
+        </ol>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">ปิด</button>
+        <button type="button" class="btn btn-primary" data-bs-dismiss="modal" data-adoption-browse>ดูน้องที่กำลังหาบ้าน</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ฟอร์มค้นหา -->
-<div class="search-panel">
+<div class="search-panel" id="browsePets" tabindex="-1">
   <form method="GET" action="{{ url_for('home') }}">
     <div class="row g-2 align-items-end">
     <div class="col-md-4">
