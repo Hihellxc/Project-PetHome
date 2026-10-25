@@ -317,6 +317,11 @@ def home():
 
     debug_cursor.close()
 
+    total_cursor = conn.cursor()
+    total_cursor.execute("SELECT COUNT(*) FROM pets WHERE status = 'adopted'")
+    adopted_count = total_cursor.fetchone()[0]
+    total_cursor.close()
+
     cursor = conn.cursor(dictionary=True)
 
     query = """
@@ -376,6 +381,7 @@ def home():
         keyword=keyword, breed=breed, gender=gender, age_min=age_min,
         age_max=age_max, sterilized=sterilized, vaccinated=vaccinated,
         provinces=THAI_PROVINCES, page=page, total_pages=total_pages,
+        adopted_count=adopted_count,
     )
 
 

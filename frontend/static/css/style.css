@@ -251,6 +251,57 @@ textarea:focus-visible,
 }
 .hero-wave svg { display: block; width: 100%; height: 46px; }
 
+.adopted-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  width: min(100%, 760px);
+  margin: 0 auto 20px;
+  padding: 18px 22px;
+  border: 2px solid rgba(69, 166, 245, 0.15);
+  border-radius: var(--radius-xl);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(216, 236, 255, 0.9));
+  box-shadow: var(--shadow-soft);
+}
+
+.adopted-banner-icon {
+  display: flex;
+  flex: 0 0 54px;
+  align-items: center;
+  justify-content: center;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--sun-400), var(--blossom-400));
+  font-size: 1.7rem;
+  box-shadow: var(--shadow-card);
+}
+
+.adopted-banner-copy {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  text-align: center;
+}
+
+.adopted-banner-label {
+  color: var(--navy-700);
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.adopted-banner-copy strong {
+  color: var(--navy-900);
+  font-family: "Mali", "Sarabun", sans-serif;
+  font-size: clamp(1.8rem, 3vw, 2.5rem);
+  line-height: 1;
+  overflow-wrap: anywhere;
+}
+
 /* ---------- การ์ดค้นหา ---------- */
 .search-panel {
   background: var(--white);
@@ -684,6 +735,14 @@ textarea:focus-visible,
   .hero-pethome { padding: 34px 24px; text-align: center; justify-content: center; }
   .hero-mascot { display: none; }
   .search-panel { margin-top: 0; }
+
+  .adopted-banner {
+    gap: 12px;
+    margin-bottom: 18px;
+    padding: 14px 16px;
+  }
+
+  .adopted-banner-copy { align-items: center; }
 
   .navbar-pethome .navbar-nav {
     align-items: stretch;
