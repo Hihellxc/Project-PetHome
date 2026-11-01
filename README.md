@@ -1,5 +1,7 @@
 # PetHome — Software Requirements Specification
 
+เว็บไซต์จริง: [PetHome](https://pethome-d3hr.onrender.com)
+
 เอกสารฉบับนี้เป็นข้อกำหนดซอฟต์แวร์ของ **PetHome** แพลตฟอร์มประกาศสัตว์เลี้ยงเพื่อหาบ้านใหม่และจัดการคำขอรับเลี้ยง โดยอ้างอิงการทำงานที่มีอยู่ใน source code ปัจจุบัน
 
 เอกสารประกอบ:
